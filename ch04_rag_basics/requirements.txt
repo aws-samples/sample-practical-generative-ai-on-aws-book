@@ -1,0 +1,10 @@
+boto3
+langchain==0.3.21
+langchain-text-splitters
+mypy-boto3-bedrock-runtime
+mypy-boto3-bedrock-agent
+mypy-boto3-bedrock-agent-runtime
+scikit-learn==1.6.1
+matplotlib==3.8.3
+matplotlib_fontja
+faiss-cpu==1.8.0
