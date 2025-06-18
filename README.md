@@ -1,5 +1,5 @@
 ## 書籍「AWS生成AIアプリ構築実践ガイド」
-書籍「AWS生成AIアプリ構築実践ガイド」で使用するコードをまとめたリポジトリです (Amazon からご購入頂けます](https://www.amazon.co.jp/dp/4296205234)。
+書籍「AWS生成AIアプリ構築実践ガイド」で使用するコードをまとめたリポジトリです ([Amazon からご購入頂けます](https://www.amazon.co.jp/dp/4296205234))。
 
 ## Security
 
