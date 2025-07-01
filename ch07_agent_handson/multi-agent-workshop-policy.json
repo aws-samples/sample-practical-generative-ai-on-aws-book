@@ -1,0 +1,118 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "AOSSFull",
+            "Effect": "Allow",
+            "Action": [
+                "aoss:Create*",
+                "aoss:Update*",
+                "aoss:Delete*",
+                "aoss:Get*",
+                "aoss:BatchGet*",
+                "aoss:List*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "AOSSSLR",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateServiceLinkedRole",
+                "iam:DeleteServiceLinkedRole"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringLike": {
+                    "iam:AWSServiceName": [
+                        "aoss.amazonaws.com",
+                        "bedrock.amazonaws.com"
+                    ]
+                }
+            }
+        },
+        {
+            "Sid": "S3KB",
+            "Effect": "Allow",
+            "Action": [
+                "s3:CreateBucket",
+                "s3:DeleteBucket",
+                "s3:PutObject",
+                "s3:GetObject",
+                "s3:DeleteObject",
+                "s3:ListBucket"
+            ],
+            "Resource": [
+                "arn:aws:s3:::bedrock-*",
+                "arn:aws:s3:::bedrock-*/*",
+                "arn:aws:s3:::forecast-agent-kb-*",
+                "arn:aws:s3:::solar-agent-kb-*",
+                "arn:aws:s3:::peak-agent-kb-*"
+            ]
+        },
+        {
+            "Sid": "LambdaAdmin",
+            "Effect": "Allow",
+            "Action": [
+                "lambda:CreateFunction",
+                "lambda:UpdateFunctionCode",
+                "lambda:UpdateFunctionConfiguration",
+                "lambda:InvokeFunction",
+                "lambda:DeleteFunction",
+                "lambda:GetFunction",
+                "lambda:AddPermission",
+                "lambda:PublishVersion"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "DynamoAccess",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:CreateTable",
+                "dynamodb:DeleteTable",
+                "dynamodb:DescribeTable",
+                "dynamodb:PutItem",
+                "dynamodb:GetItem",
+                "dynamodb:Query",
+                "dynamodb:UpdateItem",
+                "dynamodb:DeleteItem"
+            ],
+            "Resource": "arn:aws:dynamodb:*:*:table/*-agent-*"
+        },
+        {
+            "Sid": "IAMFullForWorkshop",
+            "Effect": "Allow",
+            "Action": [
+                "iam:CreateRole",
+                "iam:DeleteRole",
+                "iam:GetRole",
+                "iam:AttachRolePolicy",
+                "iam:DetachRolePolicy",
+                "iam:PutRolePolicy",
+                "iam:DeleteRolePolicy",
+                "iam:CreatePolicy",
+                "iam:DeletePolicy",
+                "iam:List*",
+                "iam:PassRole"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "CWLogsBasic",
+            "Effect": "Allow",
+            "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents"
+            ],
+            "Resource": "arn:aws:logs:*:*:*"
+        },
+        {
+            "Sid": "STSGetCaller",
+            "Effect": "Allow",
+            "Action": "sts:GetCallerIdentity",
+            "Resource": "*"
+        }
+    ]
+}
