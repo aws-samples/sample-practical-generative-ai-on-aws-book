@@ -78,7 +78,7 @@
                 "dynamodb:UpdateItem",
                 "dynamodb:DeleteItem"
             ],
-            "Resource": "arn:aws:dynamodb:*:*:table/*-agent-*"
+            "Resource": "arn:aws:dynamodb:*:*:table/*"
         },
         {
             "Sid": "IAMFullForWorkshop",
