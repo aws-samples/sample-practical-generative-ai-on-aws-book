@@ -77,7 +77,7 @@ def retrieve_context(
         retrievalConfiguration={
             "vectorSearchConfiguration": {
                 "overrideSearchType": "HYBRID",
-                "numberOfResults": 3,
+                "numberOfResults": 5,
             }
         },
         retrievalQuery={"text": query},
