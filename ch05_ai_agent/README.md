@@ -16,14 +16,13 @@ AI エージェントは、内部システムに接続し、セマンティッ�
 実装の流れ (概要) については書籍を参照してください。
 
 ### 詳細な実装方法
-このハンズオンでは、具体的に以下の7つのステップで段階的に構築していきます: 
-1. 基本実装: Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
-1. クラウドデプロイ: AgentCore Runtimeによるセキュアなサーバーレス環境へのデプロイ
-1. コンテキスト管理: AgentCore Memoryによる会話記憶機能の実装
-1. アクセス制御: AgentCore Identityによる認証と認可の統合
-1. システム統合: AgentCore GatewayによるMCPやAPI経由でのCRMなどへの連携
-1. 高度な機能: AgentCore Code InterpreterとBrowser Toolsによる計算処理とWeb自動化
-1. 運用監視: AgentCore Observabilityによるパフォーマンス監視とデバッグ
+このハンズオンでは、Strands Agents とツールで構築したカスタマーサポートエージェントのプロトタイプを、安全で信頼できるスケーラブルなアプリケーションとして step-by-step で書き換えていきます: 
+1. [クラウドデプロイ](#step-1-agentcore-runtime-でクラウドにデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
+1. コンテキスト管理: AgentCore Memory による会話記憶機能の実装
+1. アクセス制御: AgentCore Identity による認証と認可の統合
+1. システム統合: AgentCore Gateway による MCP や API 経由での CRM などへの連携
+1. 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
+1. 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
 
 このハンズオンを通じて、プロトタイプから本格的なプロダクション環境まで対応可能な、スケーラブルで安全なAIエージェントシステムの構築方法を学習できます。
 
