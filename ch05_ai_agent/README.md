@@ -305,7 +305,7 @@ agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YO
 # ローカルでの起動
 agentcore launch --local
 ```
-別のターミナルを開き (先程作った pyenv `agentcore-env` 環境を `source agentcore-env/bin/activate ` で有効化しておきましょう)、次のコマンドで実際にエージェントを呼び出します。
+別のターミナルを開き (先程作った pyenv `agentcore-env` 環境を `source agentcore-env/bin/activate` で有効化しておきましょう)、次のコマンドで実際にエージェントを呼び出します。
 ```bash
 # 別のターミナルでテスト
 agentcore invoke --local '{
