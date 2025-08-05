@@ -1,7 +1,5 @@
 # Amazon Bedrock AgentCore ハンズオン
-ここでは、書籍「[AWS生成AIアプリ構築実践ガイド](https://www.amazon.co.jp/dp/4296205234)」の5章「AIエージェント」で紹介した Amazon Bedrock AgentCore について、ハンズオン形式で学びます。
-
-## 5.6.2 カスタマーサポートエージェントの構築例
+ここでは、書籍「[AWS生成AIアプリ構築実践ガイド](https://www.amazon.co.jp/dp/4296205234)」の5章「AIエージェント」で紹介した Amazon Bedrock AgentCore について、5.6.2 項にあるカスタマーサポートエージェントの構築例をハンズオン形式で学びます。
 
 AgentCore の利用方法を、カスタマーサポートのシナリオで紹介します。顧客からメールでの問い合わせがあった際、サポートチームは以下の作業をする必要があります: 
 - メールの妥当性確認
@@ -15,7 +13,7 @@ AI エージェントは、内部システムに接続し、セマンティッ�
 本節では、Strands Agents を使用したシンプルなプロトタイプから、Amazon Bedrock AgentCore を活用してエンタープライズ対応のプロダクションシステムまでを段階的に構築する過程を説明します。
 実装の流れ (概要) については書籍を参照してください。
 
-### 詳細な実装方法
+## 詳細な実装方法
 このハンズオンでは、Strands Agents とツールで構築したカスタマーサポートエージェントのプロトタイプを、安全で信頼できるスケーラブルなアプリケーションとして step-by-step で書き換えていきます: 
 1. [クラウドデプロイ](#step-1-agentcore-runtime-でクラウドにデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
 1. コンテキスト管理: AgentCore Memory による会話記憶機能の実装
@@ -26,10 +24,10 @@ AI エージェントは、内部システムに接続し、セマンティッ�
 
 このハンズオンを通じて、プロトタイプから本格的なプロダクション環境まで対応可能な、スケーラブルで安全なAIエージェントシステムの構築方法を学習できます。
 
-### 事前準備
+## 事前準備
 まず、今回のハンズオンで使う仮想環境を作ります。
 
-#### 環境セットアップ
+### 環境セットアップ
 ```bash
 # Python仮想環境の作成
 python -m venv agentcore-env
@@ -40,7 +38,7 @@ pip install bedrock-agentcore bedrock-agentcore-starter-toolkit
 pip install strands-agents strands-agents-tools
 ```
 
-#### IAM ロールの準備
+### IAM ロールの準備
 AgentCore で使用する IAM ロールを作成します。
 ``` bash
 # 環境変数を設定
@@ -203,8 +201,8 @@ rm agentcore-trust-policy.json agentcore-trust-policy-final.json
 rm agentcore-execution-policy.json agentcore-execution-policy-final.json
 ```
 
-### Step 1: AgentCore Runtime でクラウドにデプロイ
-#### 基本的なエージェントプロトタイプの作成
+## Step 1: AgentCore Runtime でクラウドにデプロイ
+### 基本的なエージェントプロトタイプの作成
 まず、シンプルなカスタマーサポートエージェントを作成します。
 [`customer_support_agent.py`](./customer_support_agent.py) として、以下のスクリプトを用意してあります。
 
@@ -288,21 +286,19 @@ if __name__ == "__main__":
     app.run()
 ```
 
-#### デプロイ
+### デプロイ
 リモート環境で使われる Docker コンテナ内で必要となるパッケージインストールのため、[`requirements.txt`](./requirements.txt) を以下のように用意しておきます: 
 ```txt
 strands-agents
 strands-agents-tools
 bedrock-agentcore
-bedrock-agentcore-starter-toolkit
-boto3
 ```
 
 先ほど作った IAM ロールを指定し、AgentCore の設定を行います。
 ```bash
 # 上記で作成したロールARNを使用してエージェントの設定
 # (IAMロール作成時に出力されたコマンドをコピー&ペーストしてください)
-agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole
+agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole --disable-otel 
 ```
 
 以下のコマンドを実行すると、Docker コンテナの中で Bedrock AgentCore アプリが起動します。
@@ -310,7 +306,7 @@ agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YO
 # ローカルでの起動
 agentcore launch --local
 ```
-別のターミナルを開き (先程作った pyenv `agentcore-env` 環境を有効化しておきましょう)、次のコマンドで実際にエージェントを呼び出します。
+別のターミナルを開き (先程作った pyenv `agentcore-env` 環境を `source agentcore-env/bin/activate ` で有効化しておきましょう)、次のコマンドで実際にエージェントを呼び出します。
 ```bash
 # 別のターミナルでテスト
 agentcore invoke --local '{
@@ -335,7 +331,7 @@ agentcore invoke --local '{
 
 同様に、 `--local` オプションを外すとクラウドにデプロイできます。
 ```bash
-# ローカルでの起動
+# クラウドへのデプロイ
 agentcore launch 
 
 # 別のターミナルでテスト
