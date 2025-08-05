@@ -297,8 +297,7 @@ bedrock-agentcore
 先ほど作った IAM ロールを指定し、AgentCore の設定を行います。
 ```bash
 # 上記で作成したロールARNを使用してエージェントの設定
-# (IAMロール作成時に出力されたコマンドをコピー&ペーストしてください)
-agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole --disable-otel 
+agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole 
 ```
 
 以下のコマンドを実行すると、Docker コンテナの中で Bedrock AgentCore アプリが起動します。
@@ -315,11 +314,9 @@ agentcore invoke --local '{
 ```
 
 > [!TIP]
-> もし、ローカル実行の際に必要以上に時間がかかるようであれば、上の `agentcore configure` で自動生成された Docker ファイルの中で OpenTelemetry を無効化するとスムーズに実行されるかもしれません。
-> ```Dockerfile
-> ... (省略)
-> # CMD ["opentelemetry-instrument", "python", "-m", "customer_support_agent"]
-> CMD ["python", "-m", "customer_support_agent"]
+> もし、ローカル実行の際に必要以上に時間がかかるようであれば、上の `agentcore configure` の際に `--disable-otel` オプションを指定することで OpenTelemetry を無効化するとスムーズに実行されるかもしれません。
+> ```bash
+> agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole --disable-otel 
 > ```
 
 実行結果例: 
