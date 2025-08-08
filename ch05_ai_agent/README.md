@@ -34,171 +34,8 @@ python -m venv agentcore-env
 source agentcore-env/bin/activate  
 
 # 必要なパッケージのインストール
-pip install bedrock-agentcore bedrock-agentcore-starter-toolkit
-pip install strands-agents strands-agents-tools
-```
-
-### IAM ロールの準備
-AgentCore で使用する IAM ロールを作成します。
-``` bash
-# 環境変数を設定
-export YOUR_ACCOUNT_ID=$(aws sts get-caller-identity --query Account --output text)
-export YOUR_REGION=$(aws configure get region)
-```
-
-```bash 
-# 1. 信頼関係ポリシーファイルを作成
-cat > agentcore-trust-policy.json << 'EOF'
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Principal": {
-        "Service": "bedrock-agentcore.amazonaws.com"
-      },
-      "Action": "sts:AssumeRole",
-      "Condition": {
-        "StringEquals": {
-          "aws:SourceAccount": "${YOUR_ACCOUNT_ID}"
-        },
-        "ArnLike": {
-          "aws:SourceArn": "arn:aws:bedrock-agentcore:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:*"
-        }
-      }
-    }
-  ]
-}
-EOF
-
-# 変数を置換して最終的なポリシーファイルを生成
-envsubst < agentcore-trust-policy.json > agentcore-trust-policy-final.json
-```
-
-```bash 
-# 2. IAMロールを作成
-aws iam create-role \
-  --role-name AgentCoreExecutionRole \
-  --assume-role-policy-document file://agentcore-trust-policy-final.json
-```
-
-```bash
-# 3. 実行権限ポリシーファイルを作成
-cat > agentcore-execution-policy.json << 'EOF'
-{
-  "Version": "2012-10-17",
-  "Statement": [
-    {
-      "Effect": "Allow",
-      "Action": [
-        "logs:CreateLogGroup",
-        "logs:CreateLogStream",
-        "logs:PutLogEvents",
-        "logs:DescribeLogGroups",
-        "logs:DescribeLogStreams"
-      ],
-      "Resource": "arn:aws:logs:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:log-group:/aws/bedrock-agentcore/runtimes/*"
-    },
-    {
-        "Effect": "Allow",
-        "Action": [
-            "ecr:BatchGetImage",
-            "ecr:GetAuthorizationToken",
-            "ecr:GetDownloadUrlForLayer"
-        ],
-        "Resource": [
-            "arn:aws:ecr:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:repository/bedrock_agentcore-*"
-        ]`
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock:InvokeModel",
-        "bedrock:InvokeModelWithResponseStream"
-      ],
-      "Resource": [
-        "arn:aws:bedrock:*::foundation-model/*",
-        "arn:aws:bedrock:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "bedrock-agentcore:GetWorkloadAccessToken",
-        "bedrock-agentcore:GetWorkloadAccessTokenForJWT",
-        "bedrock-agentcore:GetWorkloadAccessTokenForUserId"
-      ],
-      "Resource": [
-        "arn:aws:bedrock-agentcore:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:workload-identity-directory/default",
-        "arn:aws:bedrock-agentcore:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:workload-identity-directory/default/workload-identity/*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "ecr:GetAuthorizationToken",
-        "ecr:BatchCheckLayerAvailability",
-        "ecr:GetDownloadUrlForLayer",
-        "ecr:BatchGetImage"
-      ],
-      "Resource": [
-        "arn:aws:ecr:${YOUR_REGION}:${YOUR_ACCOUNT_ID}:repository/bedrock_agentcore-*"
-      ]
-    },
-    {
-      "Effect": "Allow",
-      "Action": "ecr:GetAuthorizationToken",
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": [
-        "xray:PutTraceSegments",
-        "xray:PutTelemetryRecords",
-        "xray:GetSamplingRules",
-        "xray:GetSamplingTargets"
-      ],
-      "Resource": "*"
-    },
-    {
-      "Effect": "Allow",
-      "Action": "cloudwatch:PutMetricData",
-      "Resource": "*",
-      "Condition": {
-        "StringEquals": {
-          "cloudwatch:namespace": "bedrock-agentcore"
-        }
-      }
-    }
-  ]
-}
-EOF
-
-# 変数を置換して最終的なポリシーファイルを生成
-envsubst < agentcore-execution-policy.json > agentcore-execution-policy-final.json
-```
-
-```bash 
-# 4. ポリシーを作成してロールにアタッチ
-aws iam create-policy \
-  --policy-name AgentCoreExecutionPolicy \
-  --policy-document file://agentcore-execution-policy-final.json
-
-aws iam attach-role-policy \
-  --role-name AgentCoreExecutionRole \
-  --policy-arn arn:aws:iam::${YOUR_ACCOUNT_ID}:policy/AgentCoreExecutionPolicy
-```
-
-```bash
-# 5. ロールARNを取得・表示
-ROLE_ARN="arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole"
-echo "Role created successfully: $ROLE_ARN"
-echo "Use this ARN in your agentcore configure command:"
-echo "agentcore configure --entrypoint your_agent.py -er $ROLE_ARN"
-
-# 一時ファイルを削除
-rm agentcore-trust-policy.json agentcore-trust-policy-final.json
-rm agentcore-execution-policy.json agentcore-execution-policy-final.json
+pip install boto3 botocore -U 
+pip install bedrock-agentcore bedrock-agentcore-starter-toolkit strands-agents strands-agents-tools
 ```
 
 ## Step 1: AgentCore Runtime でクラウドにデプロイ
@@ -297,7 +134,7 @@ bedrock-agentcore
 先ほど作った IAM ロールを指定し、AgentCore の設定を行います。
 ```bash
 # 上記で作成したロールARNを使用してエージェントの設定
-agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole 
+agentcore configure --entrypoint customer_support_agent.py 
 ```
 
 以下のコマンドを実行すると、Docker コンテナの中で Bedrock AgentCore アプリが起動します。
@@ -316,7 +153,7 @@ agentcore invoke --local '{
 > [!TIP]
 > もし、ローカル実行の際に必要以上に時間がかかるようであれば、上の `agentcore configure` の際に `--disable-otel` オプションを指定することで OpenTelemetry を無効化するとスムーズに実行されるかもしれません。
 > ```bash
-> agentcore configure --entrypoint customer_support_agent.py -er arn:aws:iam::${YOUR_ACCOUNT_ID}:role/AgentCoreExecutionRole --disable-otel 
+> agentcore configure --entrypoint customer_support_agent.py --disable-otel 
 > ```
 
 実行結果例: 
