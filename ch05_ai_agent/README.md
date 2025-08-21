@@ -1115,6 +1115,235 @@ agentcore invoke '{
 - **保守性**: ツールごとに独立した開発・デプロイ
 - **監視**: CloudWatch による詳細なログとメトリクス
 
-## Step 5 以降は準備中です 🙇
+#### 外部 CRM システムとの連携例
 
-次のステップでは、Streamlit を使用した Web UI の実装や、より高度な MCP ツール（外部 API 連携など）を実装予定です。
+AgentCore Gateway は OpenAPI 仕様を持つ外部システム（Salesforce、HubSpot、Zendesk など）との連携も可能です：
+
+```python
+# Salesforce API 連携の Lambda 関数例
+def get_salesforce_contact(email: str) -> Dict[str, Any]:
+    """Salesforce から顧客情報を取得"""
+    access_token = get_salesforce_oauth_token()
+    
+    response = requests.get(
+        f"{os.environ['SALESFORCE_INSTANCE_URL']}/services/data/v58.0/query/",
+        params={"q": f"SELECT Id, Name, Email FROM Contact WHERE Email = '{email}'"},
+        headers={"Authorization": f"Bearer {access_token}"}
+    )
+    return response.json()
+
+# OpenAPI 仕様による自動ツール生成
+python gateway_manager.py create-api-target \
+  --name SalesforceIntegration \
+  --openapi-spec salesforce-rest-api.json \
+  --auth-type oauth2
+```
+
+これにより、内部システムと外部 CRM の情報を統合した、より高度なカスタマーサポート体験を提供できます。
+
+## Step 5: 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
+
+### Built-in Tools の活用
+AgentCore では、Code Interpreter と Browser Tool という2つの強力な built-in ツールが提供されています。これらのツールを使用することで、エージェントに高度な計算処理能力と Web 自動化機能を追加できます。
+
+### 5.1 Built-in Tools 権限の設定
+
+Code Interpreter と Browser Tool を使用するために必要な IAM 権限を設定します。
+
+```bash
+# Built-in Tools の権限を自動設定
+python setup_builtin_tools_permissions.py setup
+
+# 設定確認
+python setup_builtin_tools_permissions.py show-config
+
+# 権限テスト
+python setup_builtin_tools_permissions.py test
+```
+
+このスクリプトは以下を自動実行します：
+- **Code Interpreter 権限**: セッション作成・実行・停止権限
+- **Browser Tool 権限**: ブラウザセッション管理・操作権限
+- **CloudWatch Logs 権限**: ツール実行ログの記録権限
+- **Runtime Role への権限アタッチ**: 現在使用中のエージェントロールに権限を追加
+
+#### 実行例
+
+```
+🚀 Built-in Tools アクセス権限の自動設定を開始します...
+============================================================
+🎯 現在のエージェント設定から使用中のRoleを検出: AmazonBedrockAgentCoreSDKRuntime-us-east-1-6a76038ec1
+📋 設定情報:
+   AWSアカウントID: 443338083294
+   リージョン: us-east-1
+   Runtime Role: AmazonBedrockAgentCoreSDKRuntime-us-east-1-6a76038ec1
+
+🆕 新しいポリシーを作成します: BedrockAgentCoreBuiltinToolsAccess
+✅ ポリシーを作成しました
+✅ ポリシーをロールにアタッチしました: AmazonBedrockAgentCoreSDKRuntime-us-east-1-6a76038ec1
+
+🎉 Built-in Tools アクセス権限の設定が完了しました！
+   Code Interpreter と Browser Tool が使用可能になりました。
+```
+
+### 5.2 Built-in Tools のテスト
+
+各ツールが正しく動作するかテストします。
+
+```bash
+# Code Interpreter のテスト
+python test_builtin_tools.py code-interpreter
+
+# Browser Tool のテスト
+python test_builtin_tools.py browser-tool
+
+# 統合シナリオのテスト
+python test_builtin_tools.py integrated
+
+# 包括的なテスト実行
+python test_builtin_tools.py comprehensive
+```
+
+#### 期待される結果
+
+**Code Interpreter テスト**:
+- 基本的な Python コードの実行
+- データ分析とグラフ作成
+- ファイル操作（JSON、CSV、画像ファイルの作成・読み込み）
+
+**Browser Tool テスト**:
+- Web ページへのナビゲーション
+- スクリーンショットの取得
+- ページ間の移動
+
+### 5.3 Built-in Tools 統合エージェントのデプロイ
+
+Code Interpreter と Browser Tool を統合したエージェントをデプロイします。
+
+```bash
+# Built-in Tools統合版エージェントを設定
+agentcore configure --entrypoint customer_support_agent_with_tools.py --disable-otel
+
+# プロンプトで以下のように回答：
+# Configure OAuth authorizer instead? (yes/no) [no]: yes
+# OAuth discovery URL: [Cognito設定で取得したURL]
+# OAuth client IDs: [Cognito設定で取得したClient ID]
+
+# クラウドにデプロイ
+agentcore launch
+```
+
+### 5.4 統合テスト
+
+認証 + Memory + Gateway + Built-in Tools の全機能を統合したテストを実行します。
+
+```bash
+# データ分析テスト
+agentcore invoke '{
+    "prompt": "過去6ヶ月の売上データ [100000, 120000, 95000, 110000, 130000, 125000] を分析して、トレンドをグラフで可視化してください。"
+}'
+
+# Web 情報確認テスト
+agentcore invoke '{
+    "prompt": "httpbin.org にアクセスして、API の動作確認を行ってください。"
+}'
+
+# 複合タスクテスト
+agentcore invoke '{
+    "prompt": "顧客の注文データを分析し、Web で競合他社の価格も調査して、総合的なレポートを作成してください。"
+}'
+```
+
+#### 期待される結果
+
+エージェントが以下の処理を自動実行します：
+1. **データ分析**: Code Interpreter で売上データを分析・グラフ化
+2. **Web 調査**: Browser Tool で外部サイトの情報を取得
+3. **統合レポート**: 複数のツールの結果を組み合わせた包括的な回答
+
+### 5.5 実装のポイント
+
+#### Code Interpreter の特徴
+- **安全な実行環境**: 隔離されたサンドボックスでのコード実行
+- **多言語サポート**: Python、JavaScript、TypeScript に対応
+- **ファイル操作**: データファイルの読み込み・保存・処理
+- **可視化機能**: matplotlib、pandas を使用したグラフ・チャート作成
+
+#### Browser Tool の特徴
+- **企業グレードセキュリティ**: VM レベルの分離とVPC接続
+- **モデル非依存**: 様々な AI モデルのコマンド構文に対応
+- **包括的な監査**: CloudTrail ログとセッション記録
+- **リアルタイム監視**: Live View と Session Replay 機能
+
+#### 統合による価値
+- **高度な分析**: 数値計算とデータ可視化による深い洞察
+- **リアルタイム情報**: Web から最新情報を取得
+- **自動化ワークフロー**: 複数ステップの処理を自動実行
+- **エンタープライズ対応**: セキュリティと監査要件を満たす
+
+#### 実用的なユースケース
+
+**Code Interpreter の活用例**:
+```python
+# 売上予測分析
+import numpy as np
+import matplotlib.pyplot as plt
+from sklearn.linear_model import LinearRegression
+
+# 過去データから将来の売上を予測
+sales_data = [100000, 120000, 95000, 110000, 130000, 125000]
+months = np.array(range(len(sales_data))).reshape(-1, 1)
+model = LinearRegression().fit(months, sales_data)
+
+# 次の3ヶ月を予測
+future_months = np.array([[6], [7], [8]])
+predictions = model.predict(future_months)
+print(f"予測売上: {predictions}")
+```
+
+**Browser Tool の活用例**:
+```python
+# 競合他社の価格調査
+browser_tool.navigate("https://competitor-site.com/products")
+screenshot = browser_tool.screenshot()
+price_element = browser_tool.find_element("price-display")
+current_price = browser_tool.get_text(price_element)
+```
+
+### 5.6 セキュリティとベストプラクティス
+
+#### セキュリティ機能
+- **隔離実行環境**: クロス汚染を防ぐ独立した実行環境
+- **セッションタイムアウト**: リソース使用量を制限する設定可能なタイムアウト
+- **IAM 統合**: アクセス制御のための IAM 権限管理
+- **ネットワークセキュリティ**: 外部アクセスを制限するネットワーク制御
+
+#### ベストプラクティス
+- **適切なセッション管理**: 使用後は必ずセッションを停止
+- **リソース監視**: CloudWatch でリソース使用量を監視
+- **エラーハンドリング**: 例外処理による安全な実行
+- **権限の最小化**: 必要最小限の権限のみを付与
+
+## Step 6. 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
+### 🔜 次回予告: Step 6
+
+**Step 6: 運用監視: AgentCore Observability による統合監視とデバッグ**
+- **OpenTelemetry (OTEL) 互換** テレメトリデータの収集
+- **Amazon CloudWatch** 統合ダッシュボードによる可視化
+- **トレース・スパン・ログ** による詳細な実行分析
+- **パフォーマンス監視** とボトルネック特定
+- **エラー追跡** とデバッグ支援
+- **カスタムメトリクス** による運用最適化
+
+Step 6 では、プロダクション環境での運用に不可欠な監視・デバッグ機能を実装し、完全なエンタープライズAIエージェントシステムを完成させます！
+
+### 📋 実装された機能一覧
+
+1. **基本エージェント**: Strands Agents による基本的な対話機能
+1. **Memory 統合**: 長期記憶による個人化された体験
+1. **認証・認可**: Amazon Cognito + AgentCore Identity による安全なアクセス制御
+1. **MCP ツール**: AgentCore Gateway による外部システム連携
+1. **Built-in Tools**: Code Interpreter + Browser Tool による高度な分析・自動化
+1. **Observability**: OTEL + CloudWatch によるパフォーマンス監視とデバッグ
+
+これらの機能を組み合わせることで、エンタープライズレベルの AI エージェントシステムを構築できます！
