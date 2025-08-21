@@ -15,11 +15,11 @@ AI エージェントは、内部システムに接続し、セマンティッ�
 
 ## 詳細な実装方法
 このハンズオンでは、Strands Agents とツールで構築したカスタマーサポートエージェントのプロトタイプを、安全で信頼できるスケーラブルなアプリケーションとして step-by-step で書き換えていきます: 
-1. [基本実装](): Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
-1. [クラウドデプロイ](#step-2-agentcore-runtime-でクラウドにデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
-1. [コンテキスト管理](#step-3-agentcore-memory-によるコンテキスト管理): AgentCore Memory による会話記憶機能の実装
-1. [アクセス制御](#step-4-agentcore-identity-による認証と認可の統合): AgentCore Identity による認証と認可の統合
-1. [システム統合](#step-5-agentcore-gateway-による-mcp-ツール統合): AgentCore Gateway による MCP や API 経由での CRM などへの連携
+1. [基本実装](#step-1-基本実装-strands-agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成): Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
+1. [クラウドデプロイ](#step-2-クラウドデプロイ-agentcore-runtime-によるセキュアなサーバーレス環境へのデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
+1. [コンテキスト管理](#step-3-コンテキスト管理-agentcore-memory-による会話記憶機能の実装): AgentCore Memory による会話記憶機能の実装
+1. [アクセス制御](#step-4-アクセス制御-agentcore-identity-による認証と認可の統合): AgentCore Identity による認証と認可の統合
+1. [システム統合](#step-5-システム統合-agentcore-gateway-による-mcp-や-api-経由での-crm-などへの連携): AgentCore Gateway による MCP や API 経由での CRM などへの連携
 1. [高度な機能](#step-6-高度な機能-agentcore-code-interpreter-と-browser-tools-による計算処理と-web-自動化): AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
 1. [運用監視](#step-7-運用監視-agentcore-observability-によるパフォーマンス監視とデバッグ): AgentCore Observability によるパフォーマンス監視とデバッグ
 
