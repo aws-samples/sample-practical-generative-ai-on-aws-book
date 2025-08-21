@@ -15,12 +15,13 @@ AI エージェントは、内部システムに接続し、セマンティッ�
 
 ## 詳細な実装方法
 このハンズオンでは、Strands Agents とツールで構築したカスタマーサポートエージェントのプロトタイプを、安全で信頼できるスケーラブルなアプリケーションとして step-by-step で書き換えていきます: 
-1. [クラウドデプロイ](#step-1-agentcore-runtime-でクラウドにデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
-1. [コンテキスト管理](#step-2-agentcore-memory-によるコンテキスト管理): AgentCore Memory による会話記憶機能の実装
-1. [アクセス制御](#step-3-agentcore-identity-による認証と認可の統合): AgentCore Identity による認証と認可の統合
-1. [システム統合](#step-4-agentcore-gateway-による-mcp-ツール統合): AgentCore Gateway による MCP や API 経由での CRM などへの連携
-1. [高度な機能](#step-5-高度な機能-agentcore-code-interpreter-と-browser-tools-による計算処理と-web-自動化): AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
-1. [運用監視](#step-6-運用監視-agentcore-observability-によるパフォーマンス監視とデバッグ): AgentCore Observability によるパフォーマンス監視とデバッグ
+1. [基本実装](): Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
+1. [クラウドデプロイ](#step-2-agentcore-runtime-でクラウドにデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
+1. [コンテキスト管理](#step-3-agentcore-memory-によるコンテキスト管理): AgentCore Memory による会話記憶機能の実装
+1. [アクセス制御](#step-4-agentcore-identity-による認証と認可の統合): AgentCore Identity による認証と認可の統合
+1. [システム統合](#step-5-agentcore-gateway-による-mcp-ツール統合): AgentCore Gateway による MCP や API 経由での CRM などへの連携
+1. [高度な機能](#step-6-高度な機能-agentcore-code-interpreter-と-browser-tools-による計算処理と-web-自動化): AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
+1. [運用監視](#step-7-運用監視-agentcore-observability-によるパフォーマンス監視とデバッグ): AgentCore Observability によるパフォーマンス監視とデバッグ
 
 このハンズオンを通じて、プロトタイプから本格的なプロダクション環境まで対応可能な、スケーラブルで安全なAIエージェントシステムの構築方法を学習できます。
 
@@ -38,7 +39,7 @@ pip install boto3 botocore -U
 pip install bedrock-agentcore bedrock-agentcore-starter-toolkit strands-agents strands-agents-tools
 ```
 
-## Step 1: AgentCore Runtime でクラウドにデプロイ
+## Step 1: 基本実装: Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
 ### 基本的なエージェントプロトタイプの作成
 まず、シンプルなカスタマーサポートエージェントを作成します。
 [`customer_support_agent.py`](./customer_support_agent.py) として、以下のスクリプトを用意してあります。
@@ -123,6 +124,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
+## Step 2: クラウドデプロイ: AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
 ### デプロイ
 リモート環境で使われる Docker コンテナ内で必要となるパッケージインストールのため、[`requirements.txt`](./requirements.txt) を以下のように用意しておきます: 
 ```txt
@@ -174,11 +176,11 @@ agentcore invoke '{
 }'
 ```
 
-## Step 2: AgentCore Memory によるコンテキスト管理
+## Step 3: コンテキスト管理: AgentCore Memory による会話記憶機能の実装
 ### 会話記憶機能の実装
 顧客サポートでは、以前の会話履歴や顧客の過去の問題を覚えておくことが重要です。AgentCore Memory を活用して、短期記憶と長期記憶を実装しましょう。
 
-### 2.1 Memory リソースのセットアップ
+### 3.1 Memory リソースのセットアップ
 まず、Memory リソースを作成するセットアップスクリプトを実行します。
 
 `setup_memory.py`:
@@ -257,7 +259,7 @@ if __name__ == "__main__":
         sys.exit(1)
 ```
 
-### 2.2 MemoryHook の実装
+### 3.2 MemoryHook の実装
 Memory の管理を自動化する Hook を実装します。Memory hook 方式を採用することで実装を分離し、より保守性が高く、拡張可能なエージェントを構築できます。
 
 `memory_hook_provider.py`:
@@ -391,7 +393,7 @@ class MemoryHook(HookProvider):
 ```
 
 
-### 2.3 Memory Hook を使用するエージェント
+### 3.3 Memory Hook を使用するエージェント
 
 `customer_support_agent_with_memory.py`:
 
@@ -545,7 +547,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
-### 2.4 Memory の初期データ投入
+### 3.4 Memory の初期データ投入
 長期記憶を効果的に検証するため、顧客ごとに初期の会話データを投入します。
 
 `initialize_customer_memory.py`:
@@ -719,7 +721,7 @@ if __name__ == "__main__":
         print(f"\n最終結果: {json.dumps(result, ensure_ascii=False, indent=2)}")
 ```
 
-### 2.5 実行手順
+### 3.5 実行手順
 
 ```python
 # 1. Memory リソースをセットアップ（初回のみ）
@@ -744,12 +746,12 @@ agentcore invoke --local '{
 }'
 ```
 
-## Step 3: AgentCore Identity による認証と認可の統合
+## Step 4: アクセス制御: AgentCore Identity による認証と認可の統合
 
 ### 認証・認可システムの実装
 実際のプロダクション環境では、ユーザー認証と適切なアクセス制御が必要です。AgentCore Identity を使用して、Amazon Cognito と連携した認証・認可システムを構築しましょう。
 
-### 3.1 Cognito User Pool のセットアップ
+### 4.1 Cognito User Pool のセットアップ
 まず、認証基盤となる Amazon Cognito ユーザープールを設定します。
 
 ```bash
@@ -763,7 +765,7 @@ python cognito_setup.py test-auth
 python cognito_setup.py show-config
 ```
 
-### 3.2 AgentCore Identity Credentials Provider の作成
+### 4.2 AgentCore Identity Credentials Provider の作成
 Cognito と AgentCore Identity を連携するための OAuth2 認証プロバイダーを作成します。
 
 ```bash
@@ -777,7 +779,7 @@ python cognito_credentials_provider.py list
 python cognito_credentials_provider.py show-config
 ```
 
-### 3.3 Memory アクセス権限の設定
+### 4.3 Memory アクセス権限の設定
 
 AgentCore Identity を使用する場合でも、Memory アクセスには適切な IAM 権限が必要です。
 
@@ -804,7 +806,7 @@ python setup_memory_permissions.py --help
 > [!TIP]
 > 複数の Runtime Role がある場合は、スクリプトが自動的に選択します。
 
-### 3.4 Identity統合版エージェントのクラウドデプロイ
+### 4.4 Identity統合版エージェントのクラウドデプロイ
 
 認証・認可機能を統合したカスタマーサポートエージェントをクラウドにデプロイします。
 
@@ -826,7 +828,7 @@ agentcore launch
 - OAuth authorizer の設定で必ず `yes` を選択してください
 - ローカル実行（`--local`）では OAuth 認証が完全には機能しないため、クラウドデプロイが必要です
 
-### 3.5 クラウド環境での認証テスト
+### 4.5 クラウド環境での認証テスト
 
 クラウドデプロイされたエージェントで認証機能をテストします。
 
@@ -864,7 +866,7 @@ python test_cloud_identity.py show-config
 }
 ```
 
-### 3.6 実装のポイント
+### 4.6 実装のポイント
 
 #### 認証フロー
 1. **OAuth Authorizer**: AgentCore が自動的にBearer tokenを検証
@@ -884,7 +886,7 @@ python test_cloud_identity.py show-config
 - **長期記憶の活用**: 認証されたユーザーの過去の履歴を活用
 - **適切な権限設定**: Memory アクセスには明示的な IAM 権限が必要
 
-### 3.7 HTTP API での直接テスト例
+### 4.7 HTTP API での直接テスト例
 
 クラウドデプロイされたエージェントに直接HTTPリクエストを送信することも可能です。
 
@@ -908,7 +910,7 @@ curl -X POST "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/YOUR_AG
 
 **注意**: `YOUR_AGENT_ARN` は実際のエージェントARNに置き換えてください。
 
-### 3.8 トラブルシューティング
+### 4.8 トラブルシューティング
 
 #### よくある問題と解決方法
 
@@ -952,12 +954,12 @@ curl -X POST http://localhost:8000/invoke \
 ```
 
 
-## Step 4: AgentCore Gateway による MCP ツール統合
+## Step 5: システム統合: AgentCore Gateway による MCP や API 経由での CRM などへの連携
 
 ### Model Context Protocol (MCP) ツールの実装
 実際のプロダクション環境では、エージェントが外部システムやデータベースにアクセスして情報を取得する必要があります。AgentCore Gateway を使用して、Lambda 関数を MCP ツールとして公開し、統一されたインターフェースでアクセスできるようにしましょう。なお MCP に関しては、本書の5.4節 (p.139) で解説しています。
 
-### 4.1 AgentCore Gateway のセットアップ
+### 5.1 AgentCore Gateway のセットアップ
 
 顧客サポートに役立つ各種ツールを Lambda 関数として実装し、これを MCP ツールとして公開するための Gateway を作成します。ここでは注文履歴取得、製品情報検索、配送状況確認、サポートFAQ検索などの顧客サポート機能を提供するモック Lambda 関数を作成し、MCP プロトコル経由でアクセスできるようにします。
 `lambda_tools.py` には以下のツールが含まれています：
@@ -1008,7 +1010,7 @@ Gateway URL: https://bedrock-agentcore.us-east-1.amazonaws.com/gateways/gw-abc12
 Target ID: tgt-xyz789abc123
 ```
 
-### 4.2 MCP ツールのテスト
+### 5.2 MCP ツールのテスト
 
 Gateway 経由で MCP ツールが正しく動作するかテストします。
 
@@ -1064,7 +1066,7 @@ python test_gateway.py show-config
 }
 ```
 
-### 4.3 Gateway 統合エージェントのデプロイ
+### 5.3 Gateway 統合エージェントのデプロイ
 
 Gateway を使用する高機能なカスタマーサポートエージェントをデプロイします。
 
@@ -1076,7 +1078,7 @@ agentcore configure --entrypoint customer_support_agent_with_gateway.py --disabl
 agentcore launch
 ```
 
-### 4.4 統合テスト
+### 5.4 統合テスト
 
 認証 + Memory + Gateway の全機能を統合したテストを実行します。
 
@@ -1095,7 +1097,7 @@ agentcore invoke '{
 3. `check_shipping_status` ツールで配送状況を確認
 4. 結果を統合して分かりやすく回答
 
-### 4.5 実装のポイント
+### 5.5 実装のポイント
 
 #### MCP ツールの利点
 - **統一インターフェース**: すべてのツールが MCP プロトコルで統一
@@ -1141,12 +1143,12 @@ python gateway_manager.py create-api-target \
 
 これにより、内部システムと外部 CRM の情報を統合した、より高度なカスタマーサポート体験を提供できます。
 
-## Step 5: 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
+## Step 6: 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
 
 ### Built-in Tools の活用
 AgentCore では、Code Interpreter と Browser Tool という2つの強力な built-in ツールが提供されています。これらのツールを使用することで、エージェントに高度な計算処理能力と Web 自動化機能を追加できます。
 
-### 5.1 Built-in Tools 権限の設定
+### 6.1 Built-in Tools 権限の設定
 
 Code Interpreter と Browser Tool を使用するために必要な IAM 権限を設定します。
 
@@ -1186,7 +1188,7 @@ python setup_builtin_tools_permissions.py test
    Code Interpreter と Browser Tool が使用可能になりました。
 ```
 
-### 5.2 Built-in Tools のテスト
+### 6.2 Built-in Tools のテスト
 
 各ツールが正しく動作するかテストします。
 
@@ -1216,7 +1218,7 @@ python test_builtin_tools.py comprehensive
 - スクリーンショットの取得
 - ページ間の移動
 
-### 5.3 Built-in Tools 統合エージェントのデプロイ
+### 6.3 Built-in Tools 統合エージェントのデプロイ
 
 Code Interpreter と Browser Tool を統合したエージェントをデプロイします。
 
@@ -1233,7 +1235,7 @@ agentcore configure --entrypoint customer_support_agent_with_tools.py --disable-
 agentcore launch
 ```
 
-### 5.4 統合テスト
+### 6.4 統合テスト
 
 認証 + Memory + Gateway + Built-in Tools の全機能を統合したテストを実行します。
 
@@ -1261,7 +1263,7 @@ agentcore invoke '{
 2. **Web 調査**: Browser Tool で外部サイトの情報を取得
 3. **統合レポート**: 複数のツールの結果を組み合わせた包括的な回答
 
-### 5.5 実装のポイント
+### 6.5 実装のポイント
 
 #### Code Interpreter の特徴
 - **安全な実行環境**: 隔離されたサンドボックスでのコード実行
@@ -1310,7 +1312,7 @@ price_element = browser_tool.find_element("price-display")
 current_price = browser_tool.get_text(price_element)
 ```
 
-### 5.6 セキュリティとベストプラクティス
+### 6.6 セキュリティとベストプラクティス
 
 #### セキュリティ機能
 - **隔離実行環境**: クロス汚染を防ぐ独立した実行環境
@@ -1324,7 +1326,7 @@ current_price = browser_tool.get_text(price_element)
 - **エラーハンドリング**: 例外処理による安全な実行
 - **権限の最小化**: 必要最小限の権限のみを付与
 
-## Step 6: 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
+## Step 7: 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
 
 ### Observability の概要
 プロダクション環境でのAIエージェント運用では、パフォーマンス監視、エラー追跡、デバッグ機能が不可欠です。AgentCore Observability は、OpenTelemetry (OTEL) 互換のテレメトリデータを収集し、Amazon CloudWatch と統合した包括的な監視ソリューションを提供します。
@@ -1336,7 +1338,7 @@ current_price = browser_tool.get_text(price_element)
 - **カスタムメトリクス**: ビジネス固有の指標の追跡
 - **ダッシュボード**: CloudWatch 統合による直感的な可視化
 
-### 6.1 CloudWatch Transaction Search の有効化
+### 7.1 CloudWatch Transaction Search の有効化
 
 まず、AgentCore の Observability 機能を使用するために、CloudWatch Transaction Search を有効化します。
 
@@ -1615,7 +1617,7 @@ if __name__ == "__main__":
     main()
 ```
 
-### 6.2 OTEL インストルメンテーション付きエージェントの実装
+### 7.2 OTEL インストルメンテーション付きエージェントの実装
 
 Observability 機能を統合したカスタマーサポートエージェントを実装します。このエージェントは、OpenTelemetry (OTEL) を使用して詳細なテレメトリデータを収集し、CloudWatch に送信します。
 
@@ -1637,7 +1639,7 @@ Observability 機能を統合したカスタマーサポートエージェント
 - OpenTelemetry ログインストルメンテーション
 - セッションIDによるログ関連付け
 
-### 6.3 実行手順
+### 7.3 実行手順
 
 #### 1. Observability セットアップ
 
@@ -1700,7 +1702,7 @@ python observability_inspector.py report --hours 1
 python observability_inspector.py dashboard
 ```
 
-### 6.4 CloudWatch ダッシュボードでの監視
+### 7.4 CloudWatch ダッシュボードでの監視
 
 #### Generative AI Observability ダッシュボード
 
@@ -1731,7 +1733,7 @@ https://console.aws.amazon.com/cloudwatch/home#gen-ai-observability
 - 場所: `/aws/vendedlogs/bedrock-agentcore/<resource-id>`
 - 内容: リソース固有の操作ログ
 
-### 6.5 パフォーマンス最適化
+### 7.5 パフォーマンス最適化
 
 #### 監視すべき主要指標
 
@@ -1783,7 +1785,7 @@ cloudwatch.put_metric_alarm(
 )
 ```
 
-### 6.6 トラブルシューティング
+### 7.6 トラブルシューティング
 
 #### よくある問題と解決方法
 
@@ -1820,7 +1822,7 @@ export STRANDS_TOOL_CONSOLE_MODE=enabled
 agentcore launch --local
 ```
 
-### 6.7 本格運用に向けた考慮事項
+### 7.7 本格運用に向けた考慮事項
 
 #### セキュリティ
 
@@ -1858,7 +1860,7 @@ agentcore launch --local
 - ログ分析による根本原因調査
 - 再発防止策の実装
 
-### 6.8 実装例の実行結果
+### 7.8 実装例の実行結果
 
 #### セットアップ実行例
 
@@ -1958,13 +1960,13 @@ $ python observability_inspector.py report --hours 1
 
 ### 📋 実装された機能一覧
 
-1. ✅ **基本エージェント**: Strands Agents による基本的な対話機能
+1. ✅ **基本実装**: Strands Agents による基本的な対話機能
 2. ✅ **クラウドデプロイ**: AgentCore Runtime によるセキュアなサーバーレス環境
-3. ✅ **Memory 統合**: 長期記憶による個人化された体験とコンテキスト管理
-4. ✅ **認証・認可**: Amazon Cognito + AgentCore Identity による安全なアクセス制御
-5. ✅ **MCP ツール**: AgentCore Gateway による外部システム連携
-6. ✅ **Built-in Tools**: Code Interpreter + Browser Tool による高度な分析・自動化
-7. ✅ **Observability**: OTEL + CloudWatch によるパフォーマンス監視とデバッグ
+3. ✅ **コンテキスト管理**: AgentCore Memory による長期記憶と個人化体験
+4. ✅ **アクセス制御**: Amazon Cognito + AgentCore Identity による認証・認可
+5. ✅ **システム統合**: AgentCore Gateway による MCP や API 経由での外部連携
+6. ✅ **高度な機能**: Code Interpreter + Browser Tool による計算処理と Web 自動化
+7. ✅ **運用監視**: OTEL + CloudWatch による包括的監視とデバッグ
 
 ### 🏗️ システムアーキテクチャ
 
