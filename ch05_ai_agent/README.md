@@ -39,7 +39,7 @@ pip install boto3 botocore -U
 pip install bedrock-agentcore bedrock-agentcore-starter-toolkit strands-agents strands-agents-tools
 ```
 
-## Step 1: 基本実装: Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
+## Step 1. 基本実装: Strands Agentsとツールで構築したカスタマーサポートエージェントのプロトタイプ作成
 ### 基本的なエージェントプロトタイプの作成
 まず、シンプルなカスタマーサポートエージェントを作成します。
 [`customer_support_agent.py`](./customer_support_agent.py) として、以下のスクリプトを用意してあります。
@@ -124,7 +124,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
-## Step 2: クラウドデプロイ: AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
+## Step 2. クラウドデプロイ: AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
 ### デプロイ
 リモート環境で使われる Docker コンテナ内で必要となるパッケージインストールのため、[`requirements.txt`](./requirements.txt) を以下のように用意しておきます: 
 ```txt
@@ -176,7 +176,7 @@ agentcore invoke '{
 }'
 ```
 
-## Step 3: コンテキスト管理: AgentCore Memory による会話記憶機能の実装
+## Step 3. コンテキスト管理: AgentCore Memory による会話記憶機能の実装
 ### 会話記憶機能の実装
 顧客サポートでは、以前の会話履歴や顧客の過去の問題を覚えておくことが重要です。AgentCore Memory を活用して、短期記憶と長期記憶を実装しましょう。
 
@@ -746,7 +746,7 @@ agentcore invoke --local '{
 }'
 ```
 
-## Step 4: アクセス制御: AgentCore Identity による認証と認可の統合
+## Step 4. アクセス制御: AgentCore Identity による認証と認可の統合
 
 ### 認証・認可システムの実装
 実際のプロダクション環境では、ユーザー認証と適切なアクセス制御が必要です。AgentCore Identity を使用して、Amazon Cognito と連携した認証・認可システムを構築しましょう。
@@ -954,7 +954,7 @@ curl -X POST http://localhost:8000/invoke \
 ```
 
 
-## Step 5: システム統合: AgentCore Gateway による MCP や API 経由での CRM などへの連携
+## Step 5. システム統合: AgentCore Gateway による MCP や API 経由での CRM などへの連携
 
 ### Model Context Protocol (MCP) ツールの実装
 実際のプロダクション環境では、エージェントが外部システムやデータベースにアクセスして情報を取得する必要があります。AgentCore Gateway を使用して、Lambda 関数を MCP ツールとして公開し、統一されたインターフェースでアクセスできるようにしましょう。なお MCP に関しては、本書の5.4節 (p.139) で解説しています。
@@ -1143,7 +1143,7 @@ python gateway_manager.py create-api-target \
 
 これにより、内部システムと外部 CRM の情報を統合した、より高度なカスタマーサポート体験を提供できます。
 
-## Step 6: 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
+## Step 6. 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
 
 ### Built-in Tools の活用
 AgentCore では、Code Interpreter と Browser Tool という2つの強力な built-in ツールが提供されています。これらのツールを使用することで、エージェントに高度な計算処理能力と Web 自動化機能を追加できます。
@@ -1326,7 +1326,7 @@ current_price = browser_tool.get_text(price_element)
 - **エラーハンドリング**: 例外処理による安全な実行
 - **権限の最小化**: 必要最小限の権限のみを付与
 
-## Step 7: 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
+## Step 7. 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
 
 ### Observability の概要
 プロダクション環境でのAIエージェント運用では、パフォーマンス監視、エラー追跡、デバッグ機能が不可欠です。AgentCore Observability は、OpenTelemetry (OTEL) 互換のテレメトリデータを収集し、Amazon CloudWatch と統合した包括的な監視ソリューションを提供します。
