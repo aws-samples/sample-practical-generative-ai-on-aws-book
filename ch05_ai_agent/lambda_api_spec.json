@@ -1,0 +1,62 @@
+[
+    {
+        "name": "get_order_history",
+        "description": "顧客の注文履歴を取得します。最新の注文から指定された件数を返します。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "customer_id": {
+                    "type": "string",
+                    "description": "顧客ID"
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "取得する注文件数（デフォルト: 5、1-20の範囲）"
+                }
+            },
+            "required": ["customer_id"]
+        }
+    },
+    {
+        "name": "get_product_info",
+        "description": "製品名で製品情報を検索し、詳細な仕様や価格情報を取得します。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "product_name": {
+                    "type": "string",
+                    "description": "検索する製品名（部分一致可能）"
+                }
+            },
+            "required": ["product_name"]
+        }
+    },
+    {
+        "name": "check_shipping_status",
+        "description": "注文IDを使用して配送状況を確認します。追跡番号や配送履歴も含まれます。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "order_id": {
+                    "type": "string",
+                    "description": "注文ID（例: ORD-2024-001）"
+                }
+            },
+            "required": ["order_id"]
+        }
+    },
+    {
+        "name": "get_support_faq",
+        "description": "サポートFAQを検索します。質問内容に基づいて関連するFAQを返します。",
+        "inputSchema": {
+            "type": "object",
+            "properties": {
+                "query": {
+                    "type": "string",
+                    "description": "検索クエリ（例: '保証', '返品', '配送料'）"
+                }
+            },
+            "required": ["query"]
+        }
+    }
+]

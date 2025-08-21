@@ -377,5 +377,103 @@ def show_config():
         else:
             click.echo(f"{key}: {value}")
 
+@cli.command()
+@click.option("--username", default="testuser", help="テストユーザー名")
+@click.option("--password", default="TempPassword123!", help="テストユーザーのパスワード")
+@click.option("--email", default="test@example.com", help="テストユーザーのメールアドレス")
+def create_test_user(username, password, email):
+    """テスト用ユーザーを作成"""
+    config = load_cognito_config()
+    if not config:
+        click.echo("❌ Cognito設定が見つかりません")
+        click.echo("   先に setup コマンドを実行してください")
+        return
+    
+    try:
+        cognito_client = boto3.client('cognito-idp', region_name=get_aws_region())
+        
+        click.echo(f"👤 テストユーザーを作成中: {username}")
+        
+        # ユーザーを作成
+        try:
+            cognito_client.admin_create_user(
+                UserPoolId=config["user_pool_id"],
+                Username=username,
+                UserAttributes=[
+                    {"Name": "email", "Value": email},
+                    {"Name": "email_verified", "Value": "true"}
+                ],
+                TemporaryPassword=password,
+                MessageAction="SUPPRESS"  # ウェルカムメールを送信しない
+            )
+            click.echo(f"✅ ユーザー作成完了: {username}")
+        except cognito_client.exceptions.UsernameExistsException:
+            click.echo(f"ℹ️  ユーザーは既に存在します: {username}")
+        
+        # パスワードを永続化（初回ログイン時の強制変更を回避）
+        try:
+            cognito_client.admin_set_user_password(
+                UserPoolId=config["user_pool_id"],
+                Username=username,
+                Password=password,
+                Permanent=True
+            )
+            click.echo("✅ パスワードを永続化しました")
+        except Exception as e:
+            click.echo(f"⚠️  パスワード永続化エラー: {e}")
+        
+        # テスト認証を実行
+        click.echo("🔐 テスト認証を実行中...")
+        
+        auth_params = {
+            'USERNAME': username,
+            'PASSWORD': password
+        }
+        
+        # SECRET_HASH が必要な場合は追加
+        if config.get("client_secret"):
+            import hmac
+            import hashlib
+            import base64
+            
+            message = username + config["client_id"]
+            secret_hash = base64.b64encode(
+                hmac.new(
+                    config["client_secret"].encode(),
+                    message.encode(),
+                    digestmod=hashlib.sha256
+                ).digest()
+            ).decode()
+            auth_params['SECRET_HASH'] = secret_hash
+        
+        response = cognito_client.admin_initiate_auth(
+            UserPoolId=config["user_pool_id"],
+            ClientId=config["client_id"],
+            AuthFlow='ADMIN_NO_SRP_AUTH',
+            AuthParameters=auth_params
+        )
+        
+        access_token = response['AuthenticationResult']['AccessToken']
+        click.echo("✅ テスト認証成功!")
+        click.echo(f"   アクセストークン: {access_token[:50]}...")
+        
+        # テスト用設定を保存
+        test_config = {
+            "username": username,
+            "password": password,
+            "email": email,
+            "access_token": access_token
+        }
+        
+        with open("test_user_config.json", "w") as f:
+            json.dump(test_config, f, indent=2)
+        
+        click.echo("✅ テストユーザー設定を保存しました: test_user_config.json")
+        
+    except Exception as e:
+        click.echo(f"❌ テストユーザー作成エラー: {e}")
+        sys.exit(1)
+
+
 if __name__ == "__main__":
     cli()

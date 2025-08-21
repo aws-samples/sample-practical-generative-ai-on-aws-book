@@ -952,4 +952,169 @@ curl -X POST http://localhost:8000/invoke \
 ```
 
 
-## Step 4 以降は準備中です 🙇
+## Step 4: AgentCore Gateway による MCP ツール統合
+
+### Model Context Protocol (MCP) ツールの実装
+実際のプロダクション環境では、エージェントが外部システムやデータベースにアクセスして情報を取得する必要があります。AgentCore Gateway を使用して、Lambda 関数を MCP ツールとして公開し、統一されたインターフェースでアクセスできるようにしましょう。なお MCP に関しては、本書の5.4節 (p. 139) で解説しています。
+
+### 4.1 AgentCore Gateway のセットアップ
+
+顧客サポートに役立つ各種ツールを Lambda 関数として実装し、これを MCP ツールとして公開するための Gateway を作成します。ここでは注文履歴取得、製品情報検索、配送状況確認、サポートFAQ検索などの顧客サポート機能を提供するモック Lambda 関数を作成し、MCP プロトコル経由でアクセスできるようにします。
+`lambda_tools.py` には以下のツールが含まれています：
+- **get_order_history**: 顧客の注文履歴を取得
+- **get_product_info**: 製品情報を検索
+- **check_shipping_status**: 配送状況を確認
+- **get_support_faq**: サポートFAQを検索
+
+```bash
+# Gateway を作成（Lambda 関数も自動作成）
+python gateway_manager.py create CustomerSupportGateway
+
+# 設定確認
+python gateway_manager.py show-config
+```
+
+このスクリプトは以下を自動実行します：
+- **Lambda 関数の作成とデプロイ**: `CustomerSupportTools` という名前で4つのツール機能を含む関数を作成
+- **Lambda 実行ロールの作成**: Lambda 関数実行用の IAM ロール
+- **Gateway 実行ロールの作成**: Gateway が Lambda を呼び出すための IAM ロール  
+- **AgentCore Gateway の作成**: MCP プロトコルに対応したゲートウェイエンドポイント
+- **Gateway Target の設定**: Lambda 関数を MCP ツールとして公開する設定
+- **OAuth 認証の設定**: Cognito との連携による認証機能
+
+> [!NOTE]
+> 作成された Lambda 関数は AWS マネジメントコンソールの Lambda サービスページで確認できます。関数名は `CustomerSupportTools` で、実際のプロダクション環境では、この関数を DynamoDB や外部 API と連携させることで、リアルなデータを取得できます。
+
+#### 実行例
+
+```
+🌍 リージョン: us-east-1
+🏢 アカウントID: 443338083294
+🚀 Lambda関数を作成中: CustomerSupportTools
+🔐 Lambda実行ロールを作成中: CustomerSupportLambdaRole
+✅ Lambda実行ロールを作成しました: arn:aws:iam::443338083294:role/CustomerSupportLambdaRole
+✅ Lambda関数を作成しました: arn:aws:lambda:us-east-1:443338083294:function:CustomerSupportTools
+🚀 AgentCore Gateway を作成中: CustomerSupportGateway
+🔐 Gateway実行ロールを作成中: CustomerSupportGatewayRole
+✅ Gateway実行ロールを作成しました: arn:aws:iam::443338083294:role/CustomerSupportGatewayRole
+✅ Gateway作成完了: gw-abc123def456
+✅ Gateway Target作成完了: tgt-xyz789abc123
+✅ Gateway設定を保存しました: gateway_config.json
+
+🎉 Gateway作成完了!
+==================================================
+Gateway ID: gw-abc123def456
+Gateway URL: https://bedrock-agentcore.us-east-1.amazonaws.com/gateways/gw-abc123def456
+Target ID: tgt-xyz789abc123
+```
+
+### 4.2 MCP ツールのテスト
+
+Gateway 経由で MCP ツールが正しく動作するかテストします。
+
+```bash
+# 利用可能なツール一覧を取得
+python test_gateway.py list-tools
+
+# 特定のツールを呼び出し
+python test_gateway.py invoke-tool get_order_history '{"customer_id": "customer_oauth_verified", "limit": 3}'
+
+# 包括的なテスト実行
+python test_gateway.py comprehensive
+
+# 設定確認
+python test_gateway.py show-config
+```
+
+#### 期待される結果
+
+**ツール一覧取得**:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "...",
+  "result": {
+    "tools": [
+      {
+        "name": "get_order_history",
+        "description": "顧客の注文履歴を取得します。最新の注文から指定された件数を返します。"
+      },
+      {
+        "name": "get_product_info", 
+        "description": "製品名で製品情報を検索し、詳細な仕様や価格情報を取得します。"
+      }
+    ]
+  }
+}
+```
+
+**ツール呼び出し**:
+```json
+{
+  "jsonrpc": "2.0",
+  "id": "...",
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\n  \"customer_id\": \"customer_oauth_verified\",\n  \"orders\": [\n    {\n      \"order_id\": \"ORD-2024-001\",\n      \"date\": \"2024-01-15\",\n      \"status\": \"配送完了\",\n      \"items\": [...],\n      \"total\": 89800\n    }\n  ]\n}"
+      }
+    ]
+  }
+}
+```
+
+### 4.3 Gateway 統合エージェントのデプロイ
+
+Gateway を使用する高機能なカスタマーサポートエージェントをデプロイします。
+
+```bash
+# Gateway統合版エージェントを設定
+agentcore configure --entrypoint customer_support_agent_with_gateway.py --disable-otel
+
+# クラウドにデプロイ
+agentcore launch
+```
+
+### 4.4 統合テスト
+
+認証 + Memory + Gateway の全機能を統合したテストを実行します。
+
+```bash
+# 統合エージェントのテスト
+agentcore invoke '{
+    "prompt": "顧客ID customer_oauth_verified の注文履歴を確認して、最新の注文の配送状況も教えてください。"
+}'
+```
+
+#### 期待される結果
+
+エージェントが以下の処理を自動実行します：
+1. `get_order_history` ツールで注文履歴を取得
+2. 最新注文の `order_id` を特定
+3. `check_shipping_status` ツールで配送状況を確認
+4. 結果を統合して分かりやすく回答
+
+### 4.5 実装のポイント
+
+#### MCP ツールの利点
+- **統一インターフェース**: すべてのツールが MCP プロトコルで統一
+- **自動認証**: Gateway レベルでの OAuth 認証
+- **スケーラビリティ**: Lambda による自動スケーリング
+- **セキュリティ**: IAM ロールによる細かい権限制御
+
+#### Gateway の特徴
+- **Lambda 統合**: 既存の Lambda 関数を簡単に MCP 化
+- **認証統合**: AgentCore Identity との自動連携
+- **ツール検索**: セマンティック検索による適切なツール選択
+- **エラーハンドリング**: 統一されたエラー処理とレスポンス
+
+#### 開発効率の向上
+- **再利用性**: Lambda 関数は他のシステムからも利用可能
+- **テスタビリティ**: 各ツールを個別にテスト可能
+- **保守性**: ツールごとに独立した開発・デプロイ
+- **監視**: CloudWatch による詳細なログとメトリクス
+
+## Step 5 以降は準備中です 🙇
+
+次のステップでは、Streamlit を使用した Web UI の実装や、より高度な MCP ツール（外部 API 連携など）を実装予定です。
