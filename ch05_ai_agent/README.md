@@ -18,7 +18,7 @@ AI エージェントは、内部システムに接続し、セマンティッ�
 1. [クラウドデプロイ](#step-1-agentcore-runtime-でクラウドにデプロイ): AgentCore Runtime によるセキュアなサーバーレス環境へのデプロイ
 1. [コンテキスト管理](#step-2-agentcore-memory-によるコンテキスト管理): AgentCore Memory による会話記憶機能の実装
 1. [アクセス制御](#step-3-agentcore-identity-による認証と認可の統合): AgentCore Identity による認証と認可の統合
-1. システム統合: AgentCore Gateway による MCP や API 経由での CRM などへの連携
+1. [システム統合](#step-4-agentcore-gateway-による-mcp-ツール統合): AgentCore Gateway による MCP や API 経由での CRM などへの連携
 1. 高度な機能: AgentCore Code Interpreter と Browser Tools による計算処理と Web 自動化
 1. 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
 
