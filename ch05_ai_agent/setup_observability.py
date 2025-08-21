@@ -21,19 +21,19 @@ def setup_cloudwatch_transaction_search():
         # Transaction Search を有効化
         response = application_signals.start_discovery()
         print("✅ CloudWatch Transaction Search が有効化されました")
-        
-        # 設定確認
-        config = application_signals.get_service_level_objective()
-        print(f"📊 Transaction Search 設定: {config}")
+        print(f"📊 Discovery 設定: {response}")
         
         return True
         
     except ClientError as e:
-        if "AlreadyExistsException" in str(e):
+        error_code = e.response.get('Error', {}).get('Code', '')
+        if error_code in ["ValidationException", "ConflictException"]:
             print("ℹ️ CloudWatch Transaction Search は既に有効化されています")
             return True
         else:
             print(f"❌ Transaction Search 有効化エラー: {e}")
+            # Transaction Search が利用できない場合でも続行
+            print("⚠️ Transaction Search の設定をスキップして続行します")
             return False
 
 def setup_observability_for_memory():

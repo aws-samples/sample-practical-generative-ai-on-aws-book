@@ -172,6 +172,17 @@ ch05_ai_agent/.dockerignore
 ch05_ai_agent/cognito_config.json
 ch05_ai_agent/memory_config.json
 ch05_ai_agent/memory-policy.json
+ch05_ai_agent/gateway_config.json
+ch05_ai_agent/builtin_tools_config.json
+ch05_ai_agent/test_user_config.json
+ch05_ai_agent/observability_config.json
+
+# 実行時生成ファイル・レポート
+ch05_ai_agent/observability_report_*.json
+ch05_ai_agent/observability_test_report_*.json
 
 # AWS CLI インストーラー
 ch05_ai_agent/AWSCLIV2.pkg
+
+# macOS システムファイル
+.DS_Store

@@ -56,7 +56,7 @@ class ObservabilityTester:
                 if self.agent_name:
                     # クラウドデプロイ版をテスト
                     cmd = [
-                        'agentcore', 'invoke', self.agent_name,
+                        'agentcore', 'invoke',
                         json.dumps({"prompt": test_case['prompt']})
                     ]
                 else:
@@ -140,7 +140,7 @@ class ObservabilityTester:
             try:
                 if self.agent_name:
                     cmd = [
-                        'agentcore', 'invoke', self.agent_name,
+                        'agentcore', 'invoke',
                         json.dumps({"prompt": test_prompt})
                     ]
                 else:
@@ -254,7 +254,7 @@ class ObservabilityTester:
             try:
                 if self.agent_name:
                     cmd = [
-                        'agentcore', 'invoke', self.agent_name,
+                        'agentcore', 'invoke',
                         json.dumps({"prompt": step['prompt']})
                     ]
                 else:
