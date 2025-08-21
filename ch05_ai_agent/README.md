@@ -257,7 +257,7 @@ if __name__ == "__main__":
         sys.exit(1)
 ```
 
-## 2.2 MemoryHook の実装
+### 2.2 MemoryHook の実装
 Memory の管理を自動化する Hook を実装します。Memory hook 方式を採用することで実装を分離し、より保守性が高く、拡張可能なエージェントを構築できます。
 
 `memory_hook_provider.py`:
@@ -391,7 +391,7 @@ class MemoryHook(HookProvider):
 ```
 
 
-## 2.3 Memory Hook を使用するエージェント
+### 2.3 Memory Hook を使用するエージェント
 
 `customer_support_agent_with_memory.py`:
 
@@ -545,7 +545,7 @@ if __name__ == "__main__":
     app.run()
 ```
 
-## 2.4 Memory の初期データ投入
+### 2.4 Memory の初期データ投入
 長期記憶を効果的に検証するため、顧客ごとに初期の会話データを投入します。
 
 `initialize_customer_memory.py`:
@@ -719,7 +719,7 @@ if __name__ == "__main__":
         print(f"\n最終結果: {json.dumps(result, ensure_ascii=False, indent=2)}")
 ```
 
-## 2.5 実行手順
+### 2.5 実行手順
 
 ```python
 # 1. Memory リソースをセットアップ（初回のみ）
