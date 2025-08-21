@@ -744,4 +744,212 @@ agentcore invoke --local '{
 }'
 ```
 
-## Step 3 以降は準備中です 🙇
+## Step 3: AgentCore Identity による認証と認可の統合
+
+### 認証・認可システムの実装
+実際のプロダクション環境では、ユーザー認証と適切なアクセス制御が必要です。AgentCore Identity を使用して、Amazon Cognito と連携した認証・認可システムを構築しましょう。
+
+### 3.1 Cognito User Pool のセットアップ
+まず、認証基盤となる Amazon Cognito ユーザープールを設定します。
+
+```bash
+# Cognito User Pool、Client、Domainを一括設定
+python cognito_setup.py setup --domain-prefix your-unique-domain-prefix
+
+# 認証テスト
+python cognito_setup.py test-auth
+
+# 設定確認
+python cognito_setup.py show-config
+```
+
+### 3.2 AgentCore Identity Credentials Provider の作成
+Cognito と AgentCore Identity を連携するための OAuth2 認証プロバイダーを作成します。
+
+```bash
+# OAuth2認証プロバイダーを作成
+python cognito_credentials_provider.py create --name CustomerSupportProvider
+
+# プロバイダー一覧を確認
+python cognito_credentials_provider.py list
+
+# 設定確認
+python cognito_credentials_provider.py show-config
+```
+
+### 3.3 Memory アクセス権限の設定
+
+AgentCore Identity を使用する場合でも、Memory アクセスには適切な IAM 権限が必要です。
+
+#### 自動設定スクリプトの実行
+
+既存の設定ファイル（`memory_config.json`）から情報を自動取得して、IAM権限を一発で設定できます：
+
+```bash
+# Memory アクセス権限を自動設定
+python setup_memory_permissions.py
+
+# ヘルプを表示
+python setup_memory_permissions.py --help
+```
+
+このスクリプトは以下を自動実行します：
+- 現在のAWSアカウントID・リージョンを取得
+- Step 2 で作成された `memory_config.json` から Memory ID を取得
+- AgentCore Runtime Role を自動検出
+- 適切な Resource ARN でポリシーファイルを生成
+- IAM ポリシーの作成またはアップデート
+- Runtime Role へのポリシーアタッチ
+
+> [!TIP]
+> 複数の Runtime Role がある場合は、スクリプトが自動的に選択します。
+
+### 3.4 Identity統合版エージェントのクラウドデプロイ
+
+認証・認可機能を統合したカスタマーサポートエージェントをクラウドにデプロイします。
+
+```bash
+# Identity統合版エージェントを設定（OAuth Authorizerを有効化）
+agentcore configure --entrypoint customer_support_agent_with_identity.py --disable-otel
+
+# プロンプトで以下のように回答：
+# Configure OAuth authorizer instead? (yes/no) [no]: yes
+# OAuth discovery URL: [Cognito設定で取得したURL]
+# OAuth client IDs: [Cognito設定で取得したClient ID]
+# OAuth audience: [空白のままEnter]
+
+# クラウドにデプロイ
+agentcore launch
+```
+
+**重要**: 
+- OAuth authorizer の設定で必ず `yes` を選択してください
+- ローカル実行（`--local`）では OAuth 認証が完全には機能しないため、クラウドデプロイが必要です
+
+### 3.5 クラウド環境での認証テスト
+
+クラウドデプロイされたエージェントで認証機能をテストします。
+
+```bash
+# 認証付きテスト（成功するはず）
+python test_cloud_identity.py test-authenticated
+
+# 認証なしテスト（エラーになるはず）
+python test_cloud_identity.py test-unauthenticated
+
+# 設定確認
+python test_cloud_identity.py show-config
+```
+
+#### 期待される結果
+
+**認証付きテスト**:
+```json
+{
+  "result": "...",
+  "metadata": {
+    "user_id": "customer_oauth_verified",
+    "session_id": "session_1234567890",
+    "user_name": "OAuth認証済みユーザー",
+    "user_email": "oauth-verified@example.com",
+    "authenticated": true
+  }
+}
+```
+
+**認証なしテスト**:
+```json
+{
+  "message": "OAuth authorization failed: Failed to parse token"
+}
+```
+
+### 3.6 実装のポイント
+
+#### 認証フロー
+1. **OAuth Authorizer**: AgentCore が自動的にBearer tokenを検証
+2. **エントリーポイント到達**: 認証済みユーザーのみがエージェントにアクセス可能
+3. **ユーザー識別**: 認証されたユーザー情報を基にした処理
+4. **パーソナライズ**: 認証されたユーザー情報を基にした応答
+
+#### セキュリティ機能
+- **Bearer Token 必須**: HTTP Authorization ヘッダーでのトークン送信が必要
+- **自動認証・認可**: AgentCore Runtime レベルでの認証処理
+- **セッション管理**: 認証されたユーザーごとの独立したセッション
+- **アクセス拒否**: 無効なトークンや認証なしリクエストは自動的に拒否
+
+#### Memory との統合
+- **ユーザー固有の記憶**: 認証されたユーザーIDを使用した Memory 管理
+- **プライバシー保護**: ユーザー間での記憶の分離
+- **長期記憶の活用**: 認証されたユーザーの過去の履歴を活用
+- **適切な権限設定**: Memory アクセスには明示的な IAM 権限が必要
+
+### 3.7 HTTP API での直接テスト例
+
+クラウドデプロイされたエージェントに直接HTTPリクエストを送信することも可能です。
+
+```bash
+# 認証付きリクエスト例（成功）
+curl -X POST "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/YOUR_AGENT_ARN/invocations?qualifier=DEFAULT" \
+  -H "Authorization: Bearer eyJhbGciOiJSUzI1NiIsInR5cCI6IkpXVCJ9..." \
+  -H "Content-Type: application/json" \
+  -H "X-Amzn-Bedrock-AgentCore-Runtime-Session-Id: $(uuidgen)" \
+  -d '{
+    "prompt": "私の注文履歴を確認してください"
+  }'
+
+# 認証なしリクエスト例（403エラーが返される）
+curl -X POST "https://bedrock-agentcore.us-east-1.amazonaws.com/runtimes/YOUR_AGENT_ARN/invocations?qualifier=DEFAULT" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "私の注文履歴を確認してください"
+  }'
+```
+
+**注意**: `YOUR_AGENT_ARN` は実際のエージェントARNに置き換えてください。
+
+### 3.8 トラブルシューティング
+
+#### よくある問題と解決方法
+
+**1. Memory アクセス権限エラー**
+```
+User is not authorized to perform: bedrock-agentcore:CreateEvent
+```
+→ 3.3 の手順に従って IAM Role に Memory アクセス権限を追加してください
+
+**2. OAuth 認証失敗**
+```
+OAuth authorization failed: Failed to parse token
+```
+→ 有効なアクセストークンを使用しているか確認してください
+
+**3. Resource ARN の不一致**
+```
+because no identity-based policy allows the bedrock-agentcore:CreateEvent action
+```
+→ Memory アクセス権限を再設定してください：
+
+```bash
+# 権限を再設定（自動的に正しいResource ARNを使用）
+python setup_memory_permissions.py
+```
+
+**4. エージェントが起動しない**
+→ CloudWatch ログを確認してください：
+```bash
+aws logs tail /aws/bedrock-agentcore/runtimes/YOUR_AGENT_ID-DEFAULT --follow
+```
+
+**5. ローカル実行での認証問題**
+→ OAuth Authorizer はクラウド環境でのみ完全に機能します。テストはクラウドデプロイで行ってください。
+```
+curl -X POST http://localhost:8000/invoke \
+  -H "Content-Type: application/json" \
+  -d '{
+    "prompt": "私の注文履歴を確認してください"
+  }'
+```
+
+
+## Step 4 以降は準備中です 🙇

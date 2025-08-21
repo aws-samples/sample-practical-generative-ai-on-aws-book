@@ -161,4 +161,17 @@ cython_debug/
 #  and can be added to the global gitignore or merged into this file.  For a more nuclear
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
-fig
+fig# AgentCor
+e 自動生成ファイル
+ch05_ai_agent/.bedrock_agentcore.yaml
+ch05_ai_agent/.agentcore.yaml
+ch05_ai_agent/Dockerfile
+ch05_ai_agent/.dockerignore
+
+# 環境固有の設定ファイル
+ch05_ai_agent/cognito_config.json
+ch05_ai_agent/memory_config.json
+ch05_ai_agent/memory-policy.json
+
+# AWS CLI インストーラー
+ch05_ai_agent/AWSCLIV2.pkg
