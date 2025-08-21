@@ -287,10 +287,11 @@ class BuiltinToolsPermissionManager:
             
             # Browser Tool のテスト
             print("2️⃣  Browser Tool 権限テスト")
-            from bedrock_agentcore.tools.browser_tool_client import BrowserTool
+            from bedrock_agentcore.tools.browser_client import browser_session
             
-            browser_client = BrowserTool(self.region)
-            print("✅ Browser Tool クライアント作成成功")
+            # セッション作成をテスト（すぐに終了）
+            with browser_session(self.region) as client:
+                print("✅ Browser Tool セッション作成成功")
             
             print("\n🎉 権限テスト完了！Built-in Tools が使用可能です。")
             
