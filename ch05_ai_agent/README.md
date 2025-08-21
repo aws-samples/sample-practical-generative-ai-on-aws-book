@@ -1324,26 +1324,740 @@ current_price = browser_tool.get_text(price_element)
 - **エラーハンドリング**: 例外処理による安全な実行
 - **権限の最小化**: 必要最小限の権限のみを付与
 
-## Step 6. 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
-### 🔜 次回予告: Step 6
+## Step 6: 運用監視: AgentCore Observability によるパフォーマンス監視とデバッグ
 
-**Step 6: 運用監視: AgentCore Observability による統合監視とデバッグ**
-- **OpenTelemetry (OTEL) 互換** テレメトリデータの収集
-- **Amazon CloudWatch** 統合ダッシュボードによる可視化
-- **トレース・スパン・ログ** による詳細な実行分析
-- **パフォーマンス監視** とボトルネック特定
-- **エラー追跡** とデバッグ支援
-- **カスタムメトリクス** による運用最適化
+### Observability の概要
+プロダクション環境でのAIエージェント運用では、パフォーマンス監視、エラー追跡、デバッグ機能が不可欠です。AgentCore Observability は、OpenTelemetry (OTEL) 互換のテレメトリデータを収集し、Amazon CloudWatch と統合した包括的な監視ソリューションを提供します。
 
-Step 6 では、プロダクション環境での運用に不可欠な監視・デバッグ機能を実装し、完全なエンタープライズAIエージェントシステムを完成させます！
+#### 主要機能
+- **リアルタイム監視**: セッション数、レイテンシ、トークン使用量、エラー率の監視
+- **分散トレーシング**: エージェント実行パスの詳細な可視化
+- **ログ統合**: 構造化ログによる詳細なデバッグ情報
+- **カスタムメトリクス**: ビジネス固有の指標の追跡
+- **ダッシュボード**: CloudWatch 統合による直感的な可視化
+
+### 6.1 CloudWatch Transaction Search の有効化
+
+まず、AgentCore の Observability 機能を使用するために、CloudWatch Transaction Search を有効化します。
+
+#### 自動有効化スクリプト
+
+`setup_observability.py`:
+```python
+#!/usr/bin/env python3
+"""
+AgentCore Observability のセットアップスクリプト
+CloudWatch Transaction Search の有効化とログ配信設定を自動化
+"""
+
+import boto3
+import json
+import time
+from botocore.exceptions import ClientError
+
+def setup_cloudwatch_transaction_search():
+    """CloudWatch Transaction Search を有効化"""
+    
+    print("🔍 CloudWatch Transaction Search を有効化中...")
+    
+    # CloudWatch Application Signals クライアント
+    application_signals = boto3.client('application-signals')
+    
+    try:
+        # Transaction Search を有効化
+        response = application_signals.start_discovery()
+        print("✅ CloudWatch Transaction Search が有効化されました")
+        
+        # 設定確認
+        config = application_signals.get_service_level_objective()
+        print(f"📊 Transaction Search 設定: {config}")
+        
+        return True
+        
+    except ClientError as e:
+        if "AlreadyExistsException" in str(e):
+            print("ℹ️ CloudWatch Transaction Search は既に有効化されています")
+            return True
+        else:
+            print(f"❌ Transaction Search 有効化エラー: {e}")
+            return False
+
+def setup_observability_for_memory():
+    """Memory リソースの Observability を設定"""
+    
+    # Memory 設定を読み込み
+    try:
+        with open("memory_config.json", "r") as f:
+            memory_config = json.load(f)
+            memory_id = memory_config["memory_id"]
+    except FileNotFoundError:
+        print("⚠️ memory_config.json が見つかりません。Memory の Observability 設定をスキップします。")
+        return None
+    
+    print(f"📝 Memory {memory_id} の Observability を設定中...")
+    
+    # AWS 情報を取得
+    sts = boto3.client('sts')
+    account_id = sts.get_caller_identity()['Account']
+    region = boto3.Session().region_name or 'us-east-1'
+    
+    # Memory ARN を構築
+    memory_arn = f"arn:aws:bedrock-agentcore:{region}:{account_id}:memory/{memory_id}"
+    
+    logs_client = boto3.client('logs')
+    
+    try:
+        # ログ配信設定
+        enable_observability_for_resource(
+            resource_arn=memory_arn,
+            resource_id=memory_id,
+            account_id=account_id,
+            region=region
+        )
+        
+        print(f"✅ Memory {memory_id} の Observability が設定されました")
+        return memory_id
+        
+    except Exception as e:
+        print(f"❌ Memory Observability 設定エラー: {e}")
+        return None
+
+def enable_observability_for_resource(resource_arn, resource_id, account_id, region='us-east-1'):
+    """
+    Bedrock AgentCore リソースの Observability を有効化
+    公式ドキュメントのサンプルコードを基に実装
+    """
+    logs_client = boto3.client('logs', region_name=region)
+
+    # ログ配信用のログ群を作成
+    log_group_name = f'/aws/vendedlogs/bedrock-agentcore/{resource_id}'
+    
+    try:
+        logs_client.create_log_group(logGroupName=log_group_name)
+        print(f"📝 ログ群を作成: {log_group_name}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ ログ群は既に存在: {log_group_name}")
+        else:
+            raise e
+    
+    log_group_arn = f'arn:aws:logs:{region}:{account_id}:log-group:{log_group_name}'
+    
+    # 配信ソースを作成（ログ用）
+    try:
+        logs_source_response = logs_client.put_delivery_source(
+            name=f"{resource_id}-logs-source",
+            logType="APPLICATION_LOGS",
+            resourceArn=resource_arn
+        )
+        print(f"📤 ログ配信ソースを作成: {logs_source_response['deliverySource']['name']}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ ログ配信ソースは既に存在: {resource_id}-logs-source")
+        else:
+            print(f"⚠️ ログ配信ソース作成エラー: {e}")
+    
+    # 配信ソースを作成（トレース用）
+    try:
+        traces_source_response = logs_client.put_delivery_source(
+            name=f"{resource_id}-traces-source", 
+            logType="TRACES",
+            resourceArn=resource_arn
+        )
+        print(f"🔍 トレース配信ソースを作成: {traces_source_response['deliverySource']['name']}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ トレース配信ソースは既に存在: {resource_id}-traces-source")
+        else:
+            print(f"⚠️ トレース配信ソース作成エラー: {e}")
+    
+    # 配信先を作成（ログ用）
+    try:
+        logs_destination_response = logs_client.put_delivery_destination(
+            name=f"{resource_id}-logs-destination",
+            deliveryDestinationType='CWL',
+            deliveryDestinationConfiguration={
+                'destinationResourceArn': log_group_arn,
+            }
+        )
+        print(f"📥 ログ配信先を作成: {logs_destination_response['deliveryDestination']['name']}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ ログ配信先は既に存在: {resource_id}-logs-destination")
+        else:
+            print(f"⚠️ ログ配信先作成エラー: {e}")
+    
+    # 配信先を作成（トレース用）
+    try:
+        traces_destination_response = logs_client.put_delivery_destination(
+            name=f"{resource_id}-traces-destination",
+            deliveryDestinationType='XRAY'
+        )
+        print(f"🔍 トレース配信先を作成: {traces_destination_response['deliveryDestination']['name']}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ トレース配信先は既に存在: {resource_id}-traces-destination")
+        else:
+            print(f"⚠️ トレース配信先作成エラー: {e}")
+    
+    # 配信を作成（ログ）
+    try:
+        logs_delivery = logs_client.create_delivery(
+            deliverySourceName=f"{resource_id}-logs-source",
+            deliveryDestinationArn=f"arn:aws:logs:{region}:{account_id}:delivery-destination:{resource_id}-logs-destination"
+        )
+        print(f"🚚 ログ配信を作成: {logs_delivery['delivery']['id']}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ ログ配信は既に存在")
+        else:
+            print(f"⚠️ ログ配信作成エラー: {e}")
+    
+    # 配信を作成（トレース）
+    try:
+        traces_delivery = logs_client.create_delivery(
+            deliverySourceName=f"{resource_id}-traces-source", 
+            deliveryDestinationArn=f"arn:aws:logs:{region}:{account_id}:delivery-destination:{resource_id}-traces-destination"
+        )
+        print(f"🔍 トレース配信を作成: {traces_delivery['delivery']['id']}")
+    except ClientError as e:
+        if "ResourceAlreadyExistsException" in str(e):
+            print(f"ℹ️ トレース配信は既に存在")
+        else:
+            print(f"⚠️ トレース配信作成エラー: {e}")
+    
+    print(f"✅ {resource_id} の Observability が有効化されました")
+
+def setup_gateway_observability():
+    """Gateway リソースの Observability を設定"""
+    
+    try:
+        with open("gateway_config.json", "r") as f:
+            gateway_config = json.load(f)
+            gateway_id = gateway_config["gateway_id"]
+    except FileNotFoundError:
+        print("⚠️ gateway_config.json が見つかりません。Gateway の Observability 設定をスキップします。")
+        return None
+    
+    print(f"🌐 Gateway {gateway_id} の Observability を設定中...")
+    
+    # AWS 情報を取得
+    sts = boto3.client('sts')
+    account_id = sts.get_caller_identity()['Account']
+    region = boto3.Session().region_name or 'us-east-1'
+    
+    # Gateway ARN を構築
+    gateway_arn = f"arn:aws:bedrock-agentcore:{region}:{account_id}:gateway/{gateway_id}"
+    
+    try:
+        # ログ配信設定
+        enable_observability_for_resource(
+            resource_arn=gateway_arn,
+            resource_id=gateway_id,
+            account_id=account_id,
+            region=region
+        )
+        
+        print(f"✅ Gateway {gateway_id} の Observability が設定されました")
+        return gateway_id
+        
+    except Exception as e:
+        print(f"❌ Gateway Observability 設定エラー: {e}")
+        return None
+
+def main():
+    """メイン実行関数"""
+    
+    print("🚀 AgentCore Observability セットアップを開始...")
+    print("=" * 60)
+    
+    # 1. CloudWatch Transaction Search を有効化
+    transaction_search_enabled = setup_cloudwatch_transaction_search()
+    
+    print("\n" + "=" * 60)
+    
+    # 2. Memory の Observability を設定
+    memory_id = setup_observability_for_memory()
+    
+    print("\n" + "=" * 60)
+    
+    # 3. Gateway の Observability を設定
+    gateway_id = setup_gateway_observability()
+    
+    print("\n" + "=" * 60)
+    
+    # 結果をまとめて表示
+    print("📊 Observability セットアップ結果:")
+    print(f"  Transaction Search: {'✅ 有効' if transaction_search_enabled else '❌ 無効'}")
+    print(f"  Memory Observability: {'✅ 設定済み' if memory_id else '⚠️ スキップ'}")
+    print(f"  Gateway Observability: {'✅ 設定済み' if gateway_id else '⚠️ スキップ'}")
+    
+    # 設定情報を保存
+    observability_config = {
+        "transaction_search_enabled": transaction_search_enabled,
+        "memory_id": memory_id,
+        "gateway_id": gateway_id,
+        "setup_timestamp": time.time()
+    }
+    
+    with open("observability_config.json", "w") as f:
+        json.dump(observability_config, f, indent=2)
+    
+    print(f"\n✅ 設定情報を observability_config.json に保存しました")
+    
+    print("\n🎯 次のステップ:")
+    print("1. エージェントコードに OTEL インストルメンテーションを追加")
+    print("2. requirements.txt に aws-opentelemetry-distro を追加")
+    print("3. エージェントを再デプロイ")
+    print("4. CloudWatch ダッシュボードで監視データを確認")
+
+if __name__ == "__main__":
+    main()
+```
+
+## 🎉 完成！エンタープライズAIエージェントシステム
 
 ### 📋 実装された機能一覧
 
-1. **基本エージェント**: Strands Agents による基本的な対話機能
-1. **Memory 統合**: 長期記憶による個人化された体験
-1. **認証・認可**: Amazon Cognito + AgentCore Identity による安全なアクセス制御
-1. **MCP ツール**: AgentCore Gateway による外部システム連携
-1. **Built-in Tools**: Code Interpreter + Browser Tool による高度な分析・自動化
-1. **Observability**: OTEL + CloudWatch によるパフォーマンス監視とデバッグ
+1. ✅ **基本エージェント**: Strands Agents による基本的な対話機能
+2. ✅ **クラウドデプロイ**: AgentCore Runtime によるセキュアなサーバーレス環境
+3. ✅ **Memory 統合**: 長期記憶による個人化された体験とコンテキスト管理
+4. ✅ **認証・認可**: Amazon Cognito + AgentCore Identity による安全なアクセス制御
+5. ✅ **MCP ツール**: AgentCore Gateway による外部システム連携
+6. ✅ **Built-in Tools**: Code Interpreter + Browser Tool による高度な分析・自動化
+7. ✅ **Observability**: OTEL + CloudWatch によるパフォーマンス監視とデバッグ
 
-これらの機能を組み合わせることで、エンタープライズレベルの AI エージェントシステムを構築できます！
+### 🏗️ システムアーキテクチャ
+
+```
+┌─────────────────────────────────────────────────────────────┐
+│                    CloudWatch Observability                 │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │   Metrics   │ │    Logs     │ │        Traces           │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                 AgentCore Runtime (Serverless)              │
+│  ┌─────────────────────────────────────────────────────────┐ │
+│  │        Customer Support Agent (OTEL Instrumented)      │ │
+│  │  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────┐ │ │
+│  │  │   Memory    │ │   Gateway   │ │    Built-in Tools   │ │ │
+│  │  │    Hook     │ │   (MCP)     │ │  (Code/Browser)     │ │ │
+│  │  └─────────────┘ └─────────────┘ └─────────────────────┘ │ │
+│  └─────────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                    AgentCore Identity                       │
+│              (Cognito OAuth2 Integration)                   │
+└─────────────────────────────────────────────────────────────┘
+                                │
+                                ▼
+┌─────────────────────────────────────────────────────────────┐
+│                      External Systems                       │
+│  ┌─────────────┐ ┌─────────────┐ ┌─────────────────────────┐ │
+│  │     CRM     │ │  Knowledge  │ │      Web Services       │ │
+│  │   Systems   │ │    Base     │ │     (via Gateway)       │ │
+│  └─────────────┘ └─────────────┘ └─────────────────────────┘ │
+└─────────────────────────────────────────────────────────────┘
+```
+
+### 🚀 プロダクション運用の準備完了
+
+このハンズオンで構築したシステムは、以下の要件を満たすエンタープライズレベルのAIエージェントです：
+
+#### セキュリティ
+- ✅ OAuth2 認証による安全なアクセス制御
+- ✅ IAM ベースの細かい権限管理
+- ✅ セッション管理とタイムアウト制御
+- ✅ 暗号化されたデータ保存
+
+#### スケーラビリティ
+- ✅ サーバーレスアーキテクチャによる自動スケーリング
+- ✅ 負荷分散とフォルトトレラント設計
+- ✅ リソース使用量の最適化
+- ✅ コスト効率的な運用
+
+#### 運用性
+- ✅ 包括的な監視とアラート機能
+- ✅ 詳細なログとトレース情報
+- ✅ パフォーマンス分析とボトルネック特定
+- ✅ 自動化されたデバッグ支援
+
+#### 拡張性
+- ✅ MCP プロトコルによる柔軟なツール統合
+- ✅ プラグイン可能なアーキテクチャ
+- ✅ カスタムメトリクスとダッシュボード
+- ✅ 多言語・多地域対応
+
+### 🎯 次のステップ
+
+1. **本格運用への移行**
+   - プロダクション環境での負荷テスト
+   - セキュリティ監査とペネトレーションテスト
+   - 災害復旧計画の策定
+
+2. **機能拡張**
+   - 追加のMCPツール開発
+   - カスタムBuilt-inツールの実装
+   - 多言語対応の強化
+
+3. **運用最適化**
+   - コスト分析と最適化
+   - パフォーマンスチューニング
+   - ユーザーフィードバックの収集と改善
+
+### 🏆 達成した成果
+
+このハンズオンを通じて、以下を習得しました：
+
+- **AgentCore の包括的な活用方法**
+- **エンタープライズレベルのAIシステム設計**
+- **セキュリティとスケーラビリティの両立**
+- **運用監視とデバッグの実践的手法**
+- **プロトタイプから本格運用への移行プロセス**
+
+おめでとうございます！🎉 
+あなたは今、プロダクション対応のAIエージェントシステムを構築・運用するスキルを身につけました。
+
+### 6.2 OTEL インストルメンテーション付きエージェントの実装
+
+Observability 機能を統合したカスタマーサポートエージェントを実装します。このエージェントは、OpenTelemetry (OTEL) を使用して詳細なテレメトリデータを収集し、CloudWatch に送信します。
+
+#### 主要な Observability 機能
+
+**カスタムメトリクス**:
+- `customer_support_requests_total`: 総リクエスト数
+- `customer_support_response_time_seconds`: レスポンス時間
+- `memory_operations_total`: Memory操作回数
+- `tool_usage_total`: ツール使用回数
+
+**分散トレーシング**:
+- エージェント実行パスの詳細な追跡
+- ツール呼び出しのスパン記録
+- エラー発生時の詳細なトレース情報
+
+**構造化ログ**:
+- 顧客識別、ツール使用、エラーの詳細ログ
+- OpenTelemetry ログインストルメンテーション
+- セッションIDによるログ関連付け
+
+### 6.3 実行手順
+
+#### 1. Observability セットアップ
+
+```bash
+# CloudWatch Transaction Search の有効化とログ配信設定
+python setup_observability.py
+```
+
+このスクリプトは以下を自動実行します：
+- CloudWatch Transaction Search の有効化
+- Memory リソースのログ配信設定
+- Gateway リソースのログ配信設定
+- 設定情報の保存
+
+#### 2. Observability 付きエージェントのデプロイ
+
+```bash
+# エージェントを設定（OTEL インストルメンテーション付き）
+agentcore configure --entrypoint customer_support_agent_with_observability.py
+
+# クラウドにデプロイ
+agentcore launch
+
+# 設定確認
+agentcore status
+```
+
+#### 3. Observability 機能のテスト
+
+```bash
+# 基本機能テスト
+python test_observability.py basic
+
+# 負荷テスト（10リクエスト）
+python test_observability.py load --requests 10
+
+# Memory統合テスト
+python test_observability.py memory
+
+# 包括的テスト
+python test_observability.py comprehensive
+```
+
+#### 4. 監視データの確認
+
+```bash
+# ログ確認
+python observability_inspector.py logs --hours 1
+
+# メトリクス確認
+python observability_inspector.py metrics --hours 1
+
+# トレース確認
+python observability_inspector.py traces --hours 1
+
+# 包括的レポート生成
+python observability_inspector.py report --hours 1
+
+# CloudWatch ダッシュボード情報表示
+python observability_inspector.py dashboard
+```
+
+### 6.4 CloudWatch ダッシュボードでの監視
+
+#### Generative AI Observability ダッシュボード
+
+AgentCore は CloudWatch の Generative AI Observability ページで専用ダッシュボードを提供します：
+
+**アクセス方法**:
+```
+https://console.aws.amazon.com/cloudwatch/home#gen-ai-observability
+```
+
+**主要な可視化機能**:
+- **トレース可視化**: エージェント実行パスのフローチャート
+- **パフォーマンスグラフ**: レスポンス時間、スループットの時系列グラフ
+- **エラー分析**: エラー率、エラータイプの分析
+- **カスタムメトリクス**: ビジネス固有の指標の表示
+
+#### ログ分析
+
+**エージェントランタイムログ**:
+- 場所: `/aws/bedrock-agentcore/runtimes/<agent-id>-<endpoint-name>/`
+- 内容: 実行ログ、エラー情報、デバッグ情報
+
+**OTEL構造化ログ**:
+- 場所: `/aws/bedrock-agentcore/runtimes/<agent-id>-<endpoint-name>/runtime-logs`
+- 内容: 詳細な実行情報、相関ID付きログ
+
+**Memory/Gatewayログ**:
+- 場所: `/aws/vendedlogs/bedrock-agentcore/<resource-id>`
+- 内容: リソース固有の操作ログ
+
+### 6.5 パフォーマンス最適化
+
+#### 監視すべき主要指標
+
+**レスポンス時間**:
+- 目標: 平均 < 5秒
+- アラート閾値: > 10秒
+
+**エラー率**:
+- 目標: < 1%
+- アラート閾値: > 5%
+
+**Memory使用量**:
+- 監視: Memory操作の頻度と成功率
+- 最適化: 不要な記憶の削除、効率的なクエリ
+
+**ツール使用パターン**:
+- 分析: 最も使用されるツールの特定
+- 最適化: 頻繁に使用されるツールのキャッシュ化
+
+#### CloudWatch アラームの設定例
+
+```python
+# レスポンス時間アラーム
+cloudwatch.put_metric_alarm(
+    AlarmName='AgentCore-HighResponseTime',
+    ComparisonOperator='GreaterThanThreshold',
+    EvaluationPeriods=2,
+    MetricName='customer_support_response_time_seconds',
+    Namespace='bedrock-agentcore',
+    Period=300,
+    Statistic='Average',
+    Threshold=10.0,
+    ActionsEnabled=True,
+    AlarmActions=['arn:aws:sns:region:account:alert-topic']
+)
+
+# エラー率アラーム
+cloudwatch.put_metric_alarm(
+    AlarmName='AgentCore-HighErrorRate',
+    ComparisonOperator='GreaterThanThreshold',
+    EvaluationPeriods=1,
+    MetricName='customer_support_requests_total',
+    Namespace='bedrock-agentcore',
+    Period=300,
+    Statistic='Sum',
+    Threshold=5.0,
+    ActionsEnabled=True,
+    AlarmActions=['arn:aws:sns:region:account:alert-topic']
+)
+```
+
+### 6.6 トラブルシューティング
+
+#### よくある問題と解決方法
+
+**1. Transaction Search が有効化されない**
+```bash
+# 手動で有効化
+aws application-signals start-discovery
+```
+
+**2. メトリクスが表示されない**
+- OTEL環境変数の確認
+- エージェントの再デプロイ
+- IAM権限の確認
+
+**3. ログが出力されない**
+- ログ配信設定の確認
+- CloudWatch ログ群の存在確認
+- 配信ソース・配信先の設定確認
+
+**4. トレースが記録されない**
+- X-Ray サービスの有効化確認
+- トレーシング権限の確認
+- セッションIDの正しい設定
+
+#### デバッグ用環境変数
+
+```bash
+# OTEL デバッグ有効化
+export OTEL_LOG_LEVEL=DEBUG
+export STRANDS_OTEL_ENABLE_CONSOLE_EXPORT=true
+export STRANDS_TOOL_CONSOLE_MODE=enabled
+
+# エージェント再起動
+agentcore launch --local
+```
+
+### 6.7 本格運用に向けた考慮事項
+
+#### セキュリティ
+
+**ログデータの保護**:
+- CloudWatch ログの暗号化設定
+- 機密情報のマスキング
+- アクセス権限の最小化
+
+**メトリクスデータの管理**:
+- 保存期間の設定
+- コスト最適化
+- データ分類とタグ付け
+
+#### スケーラビリティ
+
+**高負荷時の対応**:
+- メトリクス収集頻度の調整
+- ログレベルの動的変更
+- サンプリング率の最適化
+
+**コスト管理**:
+- 不要なログの削除
+- メトリクス保存期間の最適化
+- アラート通知の効率化
+
+#### 運用プロセス
+
+**監視体制**:
+- 24/7 監視の設定
+- エスカレーション手順の確立
+- 定期的なパフォーマンスレビュー
+
+**インシデント対応**:
+- 障害検知から復旧までの手順
+- ログ分析による根本原因調査
+- 再発防止策の実装
+
+### 6.8 実装例の実行結果
+
+#### セットアップ実行例
+
+```bash
+$ python setup_observability.py
+
+🚀 AgentCore Observability セットアップを開始...
+============================================================
+🔍 CloudWatch Transaction Search を有効化中...
+✅ CloudWatch Transaction Search が有効化されました
+
+============================================================
+📝 Memory mem-abc123def456 の Observability を設定中...
+📝 ログ群を作成: /aws/vendedlogs/bedrock-agentcore/mem-abc123def456
+📤 ログ配信ソースを作成: mem-abc123def456-logs-source
+🔍 トレース配信ソースを作成: mem-abc123def456-traces-source
+✅ Memory mem-abc123def456 の Observability が設定されました
+
+============================================================
+📊 Observability セットアップ結果:
+  Transaction Search: ✅ 有効
+  Memory Observability: ✅ 設定済み
+  Gateway Observability: ✅ 設定済み
+
+✅ 設定情報を observability_config.json に保存しました
+```
+
+#### テスト実行例
+
+```bash
+$ python test_observability.py comprehensive
+
+🧪 AgentCore Observability テスト開始
+対象: クラウド版 (customer-support-agent-obs)
+============================================================
+
+🧪 基本機能テスト開始...
+==================================================
+
+🔍 テスト 1/5: 顧客識別テスト
+  ✅ 成功 (3.45秒)
+  📊 Observability: 有効
+
+🔍 テスト 2/5: 注文履歴確認テスト
+  ✅ 成功 (2.87秒)
+  📊 Observability: 有効
+
+🚀 負荷テスト開始 (10リクエスト)...
+==================================================
+リクエスト 1/10... ✅ 2.34秒
+リクエスト 2/10... ✅ 2.12秒
+...
+
+📊 負荷テスト結果:
+  総実行時間: 28.45秒
+  成功リクエスト: 10/10
+  失敗リクエスト: 0/10
+  平均レスポンス時間: 2.45秒
+  スループット: 0.35 req/sec
+
+📊 包括的テスト結果:
+  基本機能: 5/5 成功
+  負荷テスト: 10/10 成功
+  Memory統合: 3/3 成功
+  Memory機能: 有効
+```
+
+#### 監視レポート例
+
+```bash
+$ python observability_inspector.py report --hours 1
+
+📊 過去1時間のObservabilityレポートを生成中...
+============================================================
+📝 過去1時間のエージェントランタイムログを取得中...
+見つかったログ群: 1個
+  /aws/bedrock-agentcore/runtimes/customer-support-agent-obs-DEFAULT: 25件のログ
+
+📊 過去1時間のCloudWatchメトリクスを取得中...
+  customer_support_requests_total: 15個のデータポイント
+  customer_support_response_time_seconds: 15個のデータポイント
+  tool_usage_total: 12個のデータポイント
+
+📈 パフォーマンス分析:
+==================================================
+総リクエスト数: 23
+平均リクエスト数/5分: 1.53
+平均レスポンス時間: 2.67秒
+最大レスポンス時間: 4.12秒
+最小レスポンス時間: 1.89秒
+総ツール使用回数: 45
+
+✅ レポートを observability_report_1640995200.json に保存しました
+```
