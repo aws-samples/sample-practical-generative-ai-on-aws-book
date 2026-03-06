@@ -1,7 +1,7 @@
 boto3
 langchain==0.3.21
 langchain-aws==0.2.18
-ragas==0.2.14
+ragas==0.3.0rc2
 datasets==3.0.2
 langchain-text-splitters
 mypy-boto3-bedrock-runtime
