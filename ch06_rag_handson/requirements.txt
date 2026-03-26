@@ -7,5 +7,5 @@ langchain-text-splitters
 mypy-boto3-bedrock-runtime
 mypy-boto3-bedrock-agent
 mypy-boto3-bedrock-agent-runtime
-streamlit==1.39.0
+streamlit==1.54.0
 python-dotenv==1.0.1
