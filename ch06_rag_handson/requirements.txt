@@ -1,5 +1,5 @@
 boto3
-langchain==0.3.21
+langchain==0.3.30
 langchain-aws==0.2.18
 ragas==0.2.14
 datasets==3.0.2
